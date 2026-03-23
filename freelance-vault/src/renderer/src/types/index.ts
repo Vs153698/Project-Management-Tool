@@ -43,13 +43,33 @@ export interface Credential {
   createdAt: string
 }
 
+export interface TimeEntry {
+  id: string
+  projectId: string
+  description: string
+  durationMinutes: number
+  date: string
+  createdAt: string
+}
+
+export interface EnvVar {
+  id: string
+  projectId: string
+  key: string
+  value: string
+  group?: string
+  createdAt: string
+}
+
 export interface Database {
   projects: Project[]
   payments: Payment[]
   credentials: Credential[]
+  timeEntries: TimeEntry[]
+  envVars: EnvVar[]
 }
 
-export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details'
+export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup'
 
 export interface BankDetail {
   id: string

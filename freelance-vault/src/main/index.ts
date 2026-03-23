@@ -2,8 +2,8 @@ import { app, shell, BrowserWindow, ipcMain, dialog, systemPreferences, clipboar
 import { join, resolve, relative } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import fs from 'fs'
-import { createHash } from 'crypto'
-import { exec } from 'child_process'
+import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -23,6 +23,8 @@ interface Database {
   projects: Project[]
   payments: Payment[]
   credentials: Credential[]
+  timeEntries?: unknown[]
+  envVars?: unknown[]
 }
 
 interface Project {
@@ -95,7 +97,7 @@ function readDb(): Database {
   } catch {
     // fallthrough
   }
-  return { projects: [], payments: [], credentials: [] }
+  return { projects: [], payments: [], credentials: [], timeEntries: [], envVars: [] }
 }
 
 function writeDb(data: Database): void {
@@ -1198,8 +1200,24 @@ app.whenReady().then(() => {
   // Skip heavy dirs when computing folder size — node_modules alone can be 500MB+
   const SIZE_SKIP_DIRS = new Set(['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.next', 'dist', 'build', '.cache'])
 
+  // Known dependency / cache dirs that are safe to delete to free space
+  const CLEANUP_DEP_DIRS = [
+    'node_modules',   // JS / TS
+    '.venv',          // Python virtualenv
+    'venv',           // Python virtualenv
+    '__pycache__',    // Python bytecode cache
+    'target',         // Rust / Maven
+    '.gradle',        // Gradle cache
+    'vendor',         // Go / PHP / Ruby
+    '.dart_tool',     // Dart / Flutter
+    'Pods',           // iOS CocoaPods
+    '.next',          // Next.js build cache
+    'dist',           // generic build output
+    'build',          // generic build output
+  ]
+
   function getDirSizeSync(dirPath: string, depth = 0): number {
-    if (depth > 8) return 0 // guard against deeply nested trees
+    if (depth > 8) return 0
     let total = 0
     try {
       for (const item of fs.readdirSync(dirPath)) {
@@ -1214,12 +1232,32 @@ app.whenReady().then(() => {
     return total
   }
 
+  // Full recursive size with no skip list — used only on known dep dirs
+  function calcDepDirSize(dirPath: string, depth = 0): number {
+    if (depth > 12) return 0
+    let total = 0
+    try {
+      for (const item of fs.readdirSync(dirPath)) {
+        const p = join(dirPath, item)
+        try {
+          const s = fs.statSync(p)
+          total += s.isDirectory() ? calcDepDirSize(p, depth + 1) : s.size
+        } catch { /* skip */ }
+      }
+    } catch { /* skip */ }
+    return total
+  }
+
   ipcMain.handle('code:list-folders', (_event, projectId: string) => {
     try {
       const rootFolder = store.get('rootFolder') as string
       const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', projectId)
       const excluded = new Set(['files', 'docs', 'credentials'])
-      const folders: { name: string; path: string; size: number; isGitRepo: boolean; createdAt: string; modifiedAt: string }[] = []
+      const folders: {
+        name: string; path: string; size: number; isGitRepo: boolean
+        depDirs: { name: string; size: number }[]
+        createdAt: string; modifiedAt: string
+      }[] = []
       if (fs.existsSync(projectFolder)) {
         for (const item of fs.readdirSync(projectFolder)) {
           if (excluded.has(item)) continue
@@ -1227,11 +1265,20 @@ app.whenReady().then(() => {
           try {
             const stat = fs.statSync(fullPath)
             if (stat.isDirectory()) {
+              // Detect which cleanup dirs exist and calculate their sizes
+              const depDirs: { name: string; size: number }[] = []
+              for (const dep of CLEANUP_DEP_DIRS) {
+                const depPath = join(fullPath, dep)
+                if (fs.existsSync(depPath)) {
+                  depDirs.push({ name: dep, size: calcDepDirSize(depPath) })
+                }
+              }
               folders.push({
                 name: item,
                 path: fullPath,
                 size: getDirSizeSync(fullPath),
                 isGitRepo: fs.existsSync(join(fullPath, '.git')),
+                depDirs,
                 createdAt: stat.birthtime.toISOString(),
                 modifiedAt: stat.mtime.toISOString(),
               })
@@ -1252,6 +1299,24 @@ app.whenReady().then(() => {
         const rootFolder = store.get('rootFolder') as string
         const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
         if (fs.existsSync(folderPath)) fs.rmSync(folderPath, { recursive: true, force: true })
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    }
+  )
+
+  // Delete a specific dep dir inside a code folder (no trash — permanent)
+  ipcMain.handle(
+    'code:delete-dep-dir',
+    (_event, payload: { projectId: string; folderName: string; depDirName: string }) => {
+      try {
+        const rootFolder = store.get('rootFolder') as string
+        const depPath = join(
+          rootFolder, 'FreelanceVault', 'projects',
+          payload.projectId, payload.folderName, payload.depDirName
+        )
+        if (fs.existsSync(depPath)) fs.rmSync(depPath, { recursive: true, force: true })
         return { success: true }
       } catch (err) {
         return { success: false, error: String(err) }
@@ -1331,6 +1396,153 @@ app.whenReady().then(() => {
       }
       await execAsync(`antigravity "${projectFolder}"`, { env, shell: '/bin/zsh' })
       return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  // ─── Backup Export ────────────────────────────────────────────
+  ipcMain.handle('backup:export', async (_event, pin: string) => {
+    try {
+      const db = readDb()
+      const plaintext = JSON.stringify(db)
+      const salt = randomBytes(16)
+      const key = scryptSync(pin, salt, 32)
+      const iv = randomBytes(12)
+      const cipher = createCipheriv('aes-256-gcm', key, iv)
+      const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
+      const tag = cipher.getAuthTag()
+      // Layout: 4-byte magic + salt(16) + iv(12) + tag(16) + ciphertext
+      const magic = Buffer.from('FVB1')
+      const payload = Buffer.concat([magic, salt, iv, tag, enc])
+      const { filePath } = await dialog.showSaveDialog({
+        title: 'Save Backup',
+        defaultPath: `freelancevault-backup-${new Date().toISOString().slice(0, 10)}.fvb`,
+        filters: [{ name: 'FreelanceVault Backup', extensions: ['fvb'] }]
+      })
+      if (!filePath) return { success: false, error: 'cancelled' }
+      fs.writeFileSync(filePath, payload)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  // ─── Backup Import ────────────────────────────────────────────
+  ipcMain.handle('backup:import', async (_event, pin: string) => {
+    try {
+      const { filePaths } = await dialog.showOpenDialog({
+        title: 'Open Backup',
+        filters: [{ name: 'FreelanceVault Backup', extensions: ['fvb'] }],
+        properties: ['openFile']
+      })
+      if (!filePaths.length) return { success: false, error: 'cancelled' }
+      const buf = fs.readFileSync(filePaths[0])
+      const magic = buf.slice(0, 4).toString()
+      if (magic !== 'FVB1') return { success: false, error: 'Invalid backup file' }
+      const salt = buf.slice(4, 20)
+      const iv = buf.slice(20, 32)
+      const tag = buf.slice(32, 48)
+      const enc = buf.slice(48)
+      const key = scryptSync(pin, salt, 32)
+      const decipher = createDecipheriv('aes-256-gcm', key, iv)
+      decipher.setAuthTag(tag)
+      const plain = Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8')
+      const data = JSON.parse(plain)
+      writeDb(data)
+      return { success: true, data }
+    } catch {
+      return { success: false, error: 'Wrong PIN or corrupted backup' }
+    }
+  })
+
+  // ─── Script: List ─────────────────────────────────────────────
+  ipcMain.handle('script:list', async (_event, payload: { projectId: string; folderName: string }) => {
+    try {
+      const rootFolder = store.get('rootFolder') as string
+      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const pkgPath = join(folderPath, 'package.json')
+      if (!fs.existsSync(pkgPath)) {
+        // Check for pyproject.toml or setup.py for Python
+        const hasPyproject = fs.existsSync(join(folderPath, 'pyproject.toml'))
+        const hasSetupPy = fs.existsSync(join(folderPath, 'setup.py'))
+        const hasRequirements = fs.existsSync(join(folderPath, 'requirements.txt'))
+        if (hasPyproject || hasSetupPy || hasRequirements) {
+          return { success: true, type: 'python', scripts: { 'run': 'python main.py', 'install': 'pip install -r requirements.txt' } }
+        }
+        return { success: true, type: 'none', scripts: {} }
+      }
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      return { success: true, type: 'node', scripts: pkg.scripts || {} }
+    } catch (err) {
+      return { success: false, error: String(err), scripts: {} }
+    }
+  })
+
+  // ─── Script: Run (streaming) ──────────────────────────────────
+  const runningScripts = new Map<string, ReturnType<typeof spawn>>()
+
+  ipcMain.handle(
+    'script:run',
+    (_event, payload: { projectId: string; folderName: string; scriptName: string; command: string }) => {
+      const rootFolder = store.get('rootFolder') as string
+      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:${process.env.PATH || ''}`,
+        FORCE_COLOR: '1'
+      }
+      const key = `${payload.projectId}:${payload.scriptName}`
+      const child = spawn('/bin/zsh', ['-c', payload.command], { cwd: folderPath, env })
+      runningScripts.set(key, child)
+
+      const win = BrowserWindow.getAllWindows()[0]
+      child.stdout.on('data', (data: Buffer) => {
+        win?.webContents.send('script:output', { key, data: data.toString() })
+      })
+      child.stderr.on('data', (data: Buffer) => {
+        win?.webContents.send('script:output', { key, data: data.toString() })
+      })
+      child.on('close', (code) => {
+        runningScripts.delete(key)
+        win?.webContents.send('script:done', { key, code })
+      })
+      return { success: true, key }
+    }
+  )
+
+  ipcMain.handle('script:stop', (_event, key: string) => {
+    const child = runningScripts.get(key)
+    if (child) {
+      child.kill('SIGTERM')
+      runningScripts.delete(key)
+      return { success: true }
+    }
+    return { success: false, error: 'Process not found' }
+  })
+
+  // ─── Invoice PDF ──────────────────────────────────────────────
+  ipcMain.handle('invoice:generate', async (_event, payload: { html: string; filename: string }) => {
+    try {
+      const rootFolder = store.get('rootFolder') as string
+      const outDir = join(rootFolder, 'FreelanceVault', 'invoices')
+      fs.mkdirSync(outDir, { recursive: true })
+      const outPath = join(outDir, payload.filename)
+
+      const win = new BrowserWindow({ show: false, webPreferences: { offscreen: true } })
+      await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
+      const pdfBuf = await win.webContents.printToPDF({ pageSize: 'A4', printBackground: true })
+      win.close()
+      fs.writeFileSync(outPath, pdfBuf)
+
+      const { filePath } = await dialog.showSaveDialog({
+        title: 'Save Invoice',
+        defaultPath: outPath,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      })
+      if (filePath && filePath !== outPath) fs.copyFileSync(outPath, filePath)
+      shell.openPath(filePath || outPath)
+      return { success: true, path: filePath || outPath }
     } catch (err) {
       return { success: false, error: String(err) }
     }

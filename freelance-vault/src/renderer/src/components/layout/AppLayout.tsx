@@ -6,6 +6,8 @@ import ProjectList from '../projects/ProjectList'
 import ProjectDetail from '../projects/ProjectDetail'
 import Analytics from '../analytics/Analytics'
 import BankDetailsPage from '../banking/BankDetailsPage'
+import BackupPage from '../backup/BackupPage'
+import QuickSwitcher from '../ui/QuickSwitcher'
 
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
@@ -28,6 +30,8 @@ export default function AppLayout(): JSX.Element {
         return <Analytics />
       case 'bank-details':
         return <BankDetailsPage />
+      case 'backup':
+        return <BackupPage />
       default:
         return <Dashboard />
     }
@@ -36,6 +40,7 @@ export default function AppLayout(): JSX.Element {
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-background">
       <Sidebar />
+      <QuickSwitcher />
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div

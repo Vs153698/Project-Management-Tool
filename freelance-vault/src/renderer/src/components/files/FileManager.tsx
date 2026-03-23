@@ -279,11 +279,17 @@ function FileSection({ title, category, projectId, description }: FileSectionPro
   )
 }
 
+interface DepDir {
+  name: string
+  size: number
+}
+
 interface CodeFolder {
   name: string
   path: string
   size?: number
   isGitRepo?: boolean
+  depDirs?: DepDir[]
   createdAt: string
   modifiedAt: string
 }
@@ -301,6 +307,9 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [pulling, setPulling] = useState<string | null>(null)
   const [pullResult, setPullResult] = useState<{ folder: string; ok: boolean; msg: string } | null>(null)
+  // dep dir cleanup: key = `${folderName}/${depDirName}`
+  const [confirmDep, setConfirmDep] = useState<{ folder: string; dep: DepDir } | null>(null)
+  const [deletingDep, setDeletingDep] = useState<string | null>(null)
 
   // Clone repo state
   const [showClone, setShowClone] = useState(false)
@@ -326,6 +335,21 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
     if (!pendingDelete) return
     await window.electron.codeDeleteFolder({ projectId, folderName: pendingDelete })
     setFolders((prev) => prev.filter((f) => f.name !== pendingDelete))
+  }
+
+  const handleDeleteDep = async () => {
+    if (!confirmDep) return
+    const key = `${confirmDep.folder}/${confirmDep.dep.name}`
+    setDeletingDep(key)
+    setConfirmDep(null)
+    await window.electron.codeDeleteDepDir({ projectId, folderName: confirmDep.folder, depDirName: confirmDep.dep.name })
+    setDeletingDep(null)
+    // Remove the dep dir from local state so UI updates instantly
+    setFolders((prev) => prev.map((f) =>
+      f.name === confirmDep.folder
+        ? { ...f, depDirs: f.depDirs?.filter((d) => d.name !== confirmDep.dep.name) }
+        : f
+    ))
   }
 
   const handlePull = async (folderName: string) => {
@@ -553,11 +577,42 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
 
                   <div className="flex-1 min-w-0">
                     <p className="text-text text-sm font-medium truncate">{folder.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-text-muted text-xs">{formatSize(folder.size)}</span>
                       <span className="text-border">·</span>
                       <span className="text-text-muted text-xs">{format(parseISO(folder.modifiedAt), 'MMM d, yyyy')}</span>
                     </div>
+                    {/* Dep dir cleanup chips */}
+                    {folder.depDirs && folder.depDirs.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {folder.depDirs.map((dep) => {
+                          const key = `${folder.name}/${dep.name}`
+                          const isDeleting = deletingDep === key
+                          return (
+                            <motion.button
+                              key={dep.name}
+                              whileTap={{ scale: 0.97 }}
+                              disabled={isDeleting}
+                              onClick={() => setConfirmDep({ folder: folder.name, dep })}
+                              title={`Delete ${dep.name} to free ${formatSize(dep.size)}`}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 border border-warning/25 text-warning text-[10px] font-medium hover:bg-warning/20 transition-colors disabled:opacity-50"
+                            >
+                              {isDeleting ? (
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                  className="w-2.5 h-2.5 rounded-full border border-warning border-t-transparent"
+                                />
+                              ) : (
+                                <Trash2 size={9} />
+                              )}
+                              {dep.name}
+                              <span className="opacity-70">· {formatSize(dep.size)}</span>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -642,6 +697,50 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
         {folders.length > 0 && ` · ${formatSize(folders.reduce((s, f) => s + (f.size ?? 0), 0))} total`}
         {' · Stored in your project directory'}
       </p>
+
+      {/* Dep dir delete confirmation */}
+      <AnimatePresence>
+        {confirmDep && (
+          <div className="modal-overlay" onClick={() => setConfirmDep(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={20} className="text-warning" />
+              </div>
+              <h3 className="text-lg font-bold text-text text-center mb-1">
+                Delete <span className="font-mono">{confirmDep.dep.name}</span>?
+              </h3>
+              <p className="text-text-muted text-sm text-center mb-2">
+                in <span className="font-medium text-text">{confirmDep.folder}</span>
+              </p>
+              <div className="flex items-center justify-center gap-2 mb-5 px-4 py-2.5 bg-success/5 border border-success/20 rounded-xl">
+                <Check size={14} className="text-success shrink-0" />
+                <p className="text-success text-sm font-semibold">
+                  Frees {formatSize(confirmDep.dep.size)}
+                </p>
+              </div>
+              <p className="text-text-muted text-xs text-center mb-5">
+                Deleted permanently — not sent to Trash. You can reinstall later.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDep(null)} className="btn-secondary flex-1 justify-center">
+                  Cancel
+                </button>
+                <button onClick={handleDeleteDep} className="flex-1 justify-center flex items-center gap-2 px-4 py-2 rounded-xl bg-warning text-white text-sm font-semibold hover:opacity-90 transition-opacity">
+                  <Trash2 size={14} />
+                  Delete & Free {formatSize(confirmDep.dep.size)}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <ConfirmDeleteModal
         isOpen={pendingDelete !== null}

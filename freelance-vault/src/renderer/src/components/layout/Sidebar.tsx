@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote, Shield, Search } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import type { AppView } from '../../types'
 import AppLogo from '../ui/AppLogo'
@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { icon: FolderKanban,    label: 'Projects',     view: 'projects'     },
   { icon: BarChart2,       label: 'Analytics',    view: 'analytics'    },
   { icon: Banknote,        label: 'Bank Details', view: 'bank-details' },
+  { icon: Shield,          label: 'Backup',       view: 'backup'       },
 ]
 
 export default function Sidebar(): JSX.Element {
@@ -76,6 +77,19 @@ export default function Sidebar(): JSX.Element {
           </div>
           <span className="font-bold text-white tracking-tight text-sm">FreelanceVault</span>
         </div>
+      </div>
+
+      {/* Quick Switcher hint */}
+      <div className="px-3 pt-3">
+        <button
+          onClick={() => useAppStore.getState().setQuickSwitcherOpen(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors text-white/60 hover:text-white/90"
+          style={{ background: 'rgba(0,0,0,0.12)', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <Search size={13} />
+          <span className="text-xs flex-1 text-left">Quick Switch</span>
+          <span className="text-[10px] opacity-60 font-mono bg-black/20 px-1.5 py-0.5 rounded">⌘K</span>
+        </button>
       </div>
 
       {/* Navigation */}

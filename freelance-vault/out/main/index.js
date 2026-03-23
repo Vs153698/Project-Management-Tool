@@ -125,7 +125,7 @@ function readDb() {
     }
   } catch {
   }
-  return { projects: [], payments: [], credentials: [] };
+  return { projects: [], payments: [], credentials: [], timeEntries: [], envVars: [] };
 }
 function writeDb(data) {
   const dbPath = getDbPath();
@@ -1116,6 +1116,32 @@ export default defineConfig({
     }
   );
   const SIZE_SKIP_DIRS = /* @__PURE__ */ new Set([".git", "node_modules", "__pycache__", ".venv", "venv", ".next", "dist", "build", ".cache"]);
+  const CLEANUP_DEP_DIRS = [
+    "node_modules",
+    // JS / TS
+    ".venv",
+    // Python virtualenv
+    "venv",
+    // Python virtualenv
+    "__pycache__",
+    // Python bytecode cache
+    "target",
+    // Rust / Maven
+    ".gradle",
+    // Gradle cache
+    "vendor",
+    // Go / PHP / Ruby
+    ".dart_tool",
+    // Dart / Flutter
+    "Pods",
+    // iOS CocoaPods
+    ".next",
+    // Next.js build cache
+    "dist",
+    // generic build output
+    "build"
+    // generic build output
+  ];
   function getDirSizeSync(dirPath, depth = 0) {
     if (depth > 8) return 0;
     let total = 0;
@@ -1126,6 +1152,22 @@ export default defineConfig({
         try {
           const s = fs.statSync(itemPath);
           total += s.isDirectory() ? getDirSizeSync(itemPath, depth + 1) : s.size;
+        } catch {
+        }
+      }
+    } catch {
+    }
+    return total;
+  }
+  function calcDepDirSize(dirPath, depth = 0) {
+    if (depth > 12) return 0;
+    let total = 0;
+    try {
+      for (const item of fs.readdirSync(dirPath)) {
+        const p = path.join(dirPath, item);
+        try {
+          const s = fs.statSync(p);
+          total += s.isDirectory() ? calcDepDirSize(p, depth + 1) : s.size;
         } catch {
         }
       }
@@ -1146,11 +1188,19 @@ export default defineConfig({
           try {
             const stat = fs.statSync(fullPath);
             if (stat.isDirectory()) {
+              const depDirs = [];
+              for (const dep of CLEANUP_DEP_DIRS) {
+                const depPath = path.join(fullPath, dep);
+                if (fs.existsSync(depPath)) {
+                  depDirs.push({ name: dep, size: calcDepDirSize(depPath) });
+                }
+              }
               folders.push({
                 name: item,
                 path: fullPath,
                 size: getDirSizeSync(fullPath),
                 isGitRepo: fs.existsSync(path.join(fullPath, ".git")),
+                depDirs,
                 createdAt: stat.birthtime.toISOString(),
                 modifiedAt: stat.mtime.toISOString()
               });
@@ -1171,6 +1221,26 @@ export default defineConfig({
         const rootFolder = store.get("rootFolder");
         const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
         if (fs.existsSync(folderPath)) fs.rmSync(folderPath, { recursive: true, force: true });
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: String(err) };
+      }
+    }
+  );
+  electron.ipcMain.handle(
+    "code:delete-dep-dir",
+    (_event, payload) => {
+      try {
+        const rootFolder = store.get("rootFolder");
+        const depPath = path.join(
+          rootFolder,
+          "FreelanceVault",
+          "projects",
+          payload.projectId,
+          payload.folderName,
+          payload.depDirName
+        );
+        if (fs.existsSync(depPath)) fs.rmSync(depPath, { recursive: true, force: true });
         return { success: true };
       } catch (err) {
         return { success: false, error: String(err) };
@@ -1243,6 +1313,136 @@ export default defineConfig({
       };
       await execAsync(`antigravity "${projectFolder}"`, { env, shell: "/bin/zsh" });
       return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("backup:export", async (_event, pin) => {
+    try {
+      const db = readDb();
+      const plaintext = JSON.stringify(db);
+      const salt = crypto.randomBytes(16);
+      const key = crypto.scryptSync(pin, salt, 32);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+      const enc = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+      const tag = cipher.getAuthTag();
+      const magic = Buffer.from("FVB1");
+      const payload = Buffer.concat([magic, salt, iv, tag, enc]);
+      const { filePath } = await electron.dialog.showSaveDialog({
+        title: "Save Backup",
+        defaultPath: `freelancevault-backup-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.fvb`,
+        filters: [{ name: "FreelanceVault Backup", extensions: ["fvb"] }]
+      });
+      if (!filePath) return { success: false, error: "cancelled" };
+      fs.writeFileSync(filePath, payload);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("backup:import", async (_event, pin) => {
+    try {
+      const { filePaths } = await electron.dialog.showOpenDialog({
+        title: "Open Backup",
+        filters: [{ name: "FreelanceVault Backup", extensions: ["fvb"] }],
+        properties: ["openFile"]
+      });
+      if (!filePaths.length) return { success: false, error: "cancelled" };
+      const buf = fs.readFileSync(filePaths[0]);
+      const magic = buf.slice(0, 4).toString();
+      if (magic !== "FVB1") return { success: false, error: "Invalid backup file" };
+      const salt = buf.slice(4, 20);
+      const iv = buf.slice(20, 32);
+      const tag = buf.slice(32, 48);
+      const enc = buf.slice(48);
+      const key = crypto.scryptSync(pin, salt, 32);
+      const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+      decipher.setAuthTag(tag);
+      const plain = Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
+      const data = JSON.parse(plain);
+      writeDb(data);
+      return { success: true, data };
+    } catch {
+      return { success: false, error: "Wrong PIN or corrupted backup" };
+    }
+  });
+  electron.ipcMain.handle("script:list", async (_event, payload) => {
+    try {
+      const rootFolder = store.get("rootFolder");
+      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const pkgPath = path.join(folderPath, "package.json");
+      if (!fs.existsSync(pkgPath)) {
+        const hasPyproject = fs.existsSync(path.join(folderPath, "pyproject.toml"));
+        const hasSetupPy = fs.existsSync(path.join(folderPath, "setup.py"));
+        const hasRequirements = fs.existsSync(path.join(folderPath, "requirements.txt"));
+        if (hasPyproject || hasSetupPy || hasRequirements) {
+          return { success: true, type: "python", scripts: { "run": "python main.py", "install": "pip install -r requirements.txt" } };
+        }
+        return { success: true, type: "none", scripts: {} };
+      }
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      return { success: true, type: "node", scripts: pkg.scripts || {} };
+    } catch (err) {
+      return { success: false, error: String(err), scripts: {} };
+    }
+  });
+  const runningScripts = /* @__PURE__ */ new Map();
+  electron.ipcMain.handle(
+    "script:run",
+    (_event, payload) => {
+      const rootFolder = store.get("rootFolder");
+      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:${process.env.PATH || ""}`,
+        FORCE_COLOR: "1"
+      };
+      const key = `${payload.projectId}:${payload.scriptName}`;
+      const child = child_process.spawn("/bin/zsh", ["-c", payload.command], { cwd: folderPath, env });
+      runningScripts.set(key, child);
+      const win = electron.BrowserWindow.getAllWindows()[0];
+      child.stdout.on("data", (data) => {
+        win?.webContents.send("script:output", { key, data: data.toString() });
+      });
+      child.stderr.on("data", (data) => {
+        win?.webContents.send("script:output", { key, data: data.toString() });
+      });
+      child.on("close", (code) => {
+        runningScripts.delete(key);
+        win?.webContents.send("script:done", { key, code });
+      });
+      return { success: true, key };
+    }
+  );
+  electron.ipcMain.handle("script:stop", (_event, key) => {
+    const child = runningScripts.get(key);
+    if (child) {
+      child.kill("SIGTERM");
+      runningScripts.delete(key);
+      return { success: true };
+    }
+    return { success: false, error: "Process not found" };
+  });
+  electron.ipcMain.handle("invoice:generate", async (_event, payload) => {
+    try {
+      const rootFolder = store.get("rootFolder");
+      const outDir = path.join(rootFolder, "FreelanceVault", "invoices");
+      fs.mkdirSync(outDir, { recursive: true });
+      const outPath = path.join(outDir, payload.filename);
+      const win = new electron.BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+      await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`);
+      const pdfBuf = await win.webContents.printToPDF({ pageSize: "A4", printBackground: true });
+      win.close();
+      fs.writeFileSync(outPath, pdfBuf);
+      const { filePath } = await electron.dialog.showSaveDialog({
+        title: "Save Invoice",
+        defaultPath: outPath,
+        filters: [{ name: "PDF", extensions: ["pdf"] }]
+      });
+      if (filePath && filePath !== outPath) fs.copyFileSync(outPath, filePath);
+      electron.shell.openPath(filePath || outPath);
+      return { success: true, path: filePath || outPath };
     } catch (err) {
       return { success: false, error: String(err) };
     }

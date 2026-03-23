@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { User, Project, Payment, Credential, Database, AppView, BankDetail } from '../types'
+import type { User, Project, Payment, Credential, Database, AppView, BankDetail, TimeEntry, EnvVar } from '../types'
 
 interface AppStore {
   user: User | null
@@ -13,6 +13,7 @@ interface AppStore {
   selectedProjectId: string | null
   isLoading: boolean
   error: string | null
+  quickSwitcherOpen: boolean
 
   // Actions
   initialize: () => Promise<void>
@@ -23,6 +24,7 @@ interface AppStore {
   setCurrency: (currency: string) => Promise<void>
   loadDb: () => Promise<void>
   saveDb: (db: Database) => Promise<void>
+  setQuickSwitcherOpen: (open: boolean) => void
 
   addProject: (project: Project) => Promise<void>
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
@@ -33,6 +35,14 @@ interface AppStore {
 
   addCredential: (credential: Credential) => Promise<void>
   deleteCredential: (id: string) => Promise<void>
+
+  addTimeEntry: (entry: TimeEntry) => Promise<void>
+  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>
+  deleteTimeEntry: (id: string) => Promise<void>
+
+  addEnvVar: (envVar: EnvVar) => Promise<void>
+  updateEnvVar: (id: string, updates: Partial<EnvVar>) => Promise<void>
+  deleteEnvVar: (id: string) => Promise<void>
 
   bankDetails: BankDetail[]
   loadBankDetails: () => Promise<void>
@@ -50,12 +60,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   rootFolder: '',
   userName: '',
   displayCurrency: 'USD',
-  db: { projects: [], payments: [], credentials: [] },
+  db: { projects: [], payments: [], credentials: [], timeEntries: [], envVars: [] },
   currentView: 'dashboard',
   selectedProjectId: null,
   isLoading: true,
   error: null,
   bankDetails: [],
+  quickSwitcherOpen: false,
 
   initialize: async () => {
     set({ isLoading: true })
@@ -121,6 +132,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ currentView: view, selectedProjectId: projectId ?? null })
   },
 
+  setQuickSwitcherOpen: (open: boolean) => set({ quickSwitcherOpen: open }),
+
   loadDb: async () => {
     try {
       const result = await window.electron.dbRead()
@@ -161,7 +174,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ...db,
       projects: db.projects.filter((p) => p.id !== id),
       payments: db.payments.filter((p) => p.projectId !== id),
-      credentials: db.credentials.filter((c) => c.projectId !== id)
+      credentials: db.credentials.filter((c) => c.projectId !== id),
+      timeEntries: (db.timeEntries || []).filter((t) => t.projectId !== id),
+      envVars: (db.envVars || []).filter((e) => e.projectId !== id)
     })
   },
 
@@ -183,6 +198,42 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteCredential: async (id: string) => {
     const { db, saveDb } = get()
     await saveDb({ ...db, credentials: db.credentials.filter((c) => c.id !== id) })
+  },
+
+  addTimeEntry: async (entry: TimeEntry) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, timeEntries: [...(db.timeEntries || []), entry] })
+  },
+
+  updateTimeEntry: async (id: string, updates: Partial<TimeEntry>) => {
+    const { db, saveDb } = get()
+    await saveDb({
+      ...db,
+      timeEntries: (db.timeEntries || []).map((t) => (t.id === id ? { ...t, ...updates } : t))
+    })
+  },
+
+  deleteTimeEntry: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, timeEntries: (db.timeEntries || []).filter((t) => t.id !== id) })
+  },
+
+  addEnvVar: async (envVar: EnvVar) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, envVars: [...(db.envVars || []), envVar] })
+  },
+
+  updateEnvVar: async (id: string, updates: Partial<EnvVar>) => {
+    const { db, saveDb } = get()
+    await saveDb({
+      ...db,
+      envVars: (db.envVars || []).map((e) => (e.id === id ? { ...e, ...updates } : e))
+    })
+  },
+
+  deleteEnvVar: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, envVars: (db.envVars || []).filter((e) => e.id !== id) })
   },
 
   loadBankDetails: async () => {

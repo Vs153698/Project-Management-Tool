@@ -95,6 +95,7 @@ export interface ElectronAPI {
     error?: string
   }>
   codeDeleteFolder: (payload: { projectId: string; folderName: string }) => Promise<{ success: boolean; error?: string }>
+  codeDeleteDepDir: (payload: { projectId: string; folderName: string; depDirName: string }) => Promise<{ success: boolean; error?: string }>
 
   // Git
   gitClone: (payload: {
@@ -107,6 +108,29 @@ export interface ElectronAPI {
   // Open in editor
   openInVscode: (projectId: string) => Promise<{ success: boolean; error?: string }>
   openInAntigravity: (projectId: string) => Promise<{ success: boolean; error?: string }>
+
+  // Backup
+  backupExport: (pin: string) => Promise<{ success: boolean; error?: string }>
+  backupImport: (pin: string) => Promise<{ success: boolean; data?: unknown; error?: string }>
+
+  // Scripts
+  scriptList: (payload: { projectId: string; folderName: string }) => Promise<{
+    success: boolean
+    type: 'node' | 'python' | 'none'
+    scripts: Record<string, string>
+    error?: string
+  }>
+  scriptRun: (payload: { projectId: string; folderName: string; scriptName: string; command: string }) => Promise<{
+    success: boolean
+    key?: string
+    error?: string
+  }>
+  scriptStop: (key: string) => Promise<{ success: boolean; error?: string }>
+  onScriptOutput: (callback: (payload: { key: string; data: string }) => void) => () => void
+  onScriptDone: (callback: (payload: { key: string; code: number | null }) => void) => () => void
+
+  // Invoice
+  invoiceGenerate: (payload: { html: string; filename: string }) => Promise<{ success: boolean; path?: string; error?: string }>
 }
 
 const api: ElectronAPI = {
@@ -141,11 +165,33 @@ const api: ElectronAPI = {
 
   codeListFolders: (projectId) => ipcRenderer.invoke('code:list-folders', projectId),
   codeDeleteFolder: (payload) => ipcRenderer.invoke('code:delete-folder', payload),
+  codeDeleteDepDir: (payload) => ipcRenderer.invoke('code:delete-dep-dir', payload),
 
   gitClone: (payload) => ipcRenderer.invoke('git:clone', payload),
   gitPull: (payload) => ipcRenderer.invoke('git:pull', payload),
   openInVscode: (projectId) => ipcRenderer.invoke('project:open-in-vscode', projectId),
   openInAntigravity: (projectId) => ipcRenderer.invoke('project:open-in-antigravity', projectId),
+
+  backupExport: (pin) => ipcRenderer.invoke('backup:export', pin),
+  backupImport: (pin) => ipcRenderer.invoke('backup:import', pin),
+
+  scriptList: (payload) => ipcRenderer.invoke('script:list', payload),
+  scriptRun: (payload) => ipcRenderer.invoke('script:run', payload),
+  scriptStop: (key) => ipcRenderer.invoke('script:stop', key),
+  onScriptOutput: (callback) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handler = (_: any, payload: { key: string; data: string }) => callback(payload)
+    ipcRenderer.on('script:output', handler)
+    return () => ipcRenderer.off('script:output', handler)
+  },
+  onScriptDone: (callback) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handler = (_: any, payload: { key: string; code: number | null }) => callback(payload)
+    ipcRenderer.on('script:done', handler)
+    return () => ipcRenderer.off('script:done', handler)
+  },
+
+  invoiceGenerate: (payload) => ipcRenderer.invoke('invoice:generate', payload),
 }
 
 if (process.contextIsolated) {

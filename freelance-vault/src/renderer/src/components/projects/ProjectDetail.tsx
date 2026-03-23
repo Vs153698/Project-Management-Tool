@@ -22,6 +22,10 @@ import PaymentTimeline from '../payments/PaymentTimeline'
 import CredentialVault from '../credentials/CredentialVault'
 import FileManager from '../files/FileManager'
 import ConfirmDeleteModal from '../ui/ConfirmDeleteModal'
+import TimeTracker from '../time/TimeTracker'
+import EnvManager from '../env/EnvManager'
+import ScriptRunner from '../scripts/ScriptRunner'
+import InvoiceGenerator from '../invoice/InvoiceGenerator'
 
 const statusColors: Record<string, string> = {
   not_started: 'text-text-muted bg-text-muted/10 border-text-muted/20',
@@ -71,7 +75,7 @@ function InfoItem({ icon: Icon, label, value, valueClass }: InfoItemProps) {
 
 export default function ProjectDetail({ projectId }: { projectId: string }): JSX.Element {
   const { db, setView, deleteProject, displayCurrency } = useAppStore()
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'credentials' | 'files'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice'>('overview')
   const [showEdit, setShowEdit] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -122,12 +126,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
 
   const isPersonal = project.projectType === 'personal'
 
-  const tabs = [
+  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice'
+  const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: 'Overview' },
-    ...(!isPersonal ? [{ key: 'payments', label: 'Payments' }] : []),
+    ...(!isPersonal ? [{ key: 'payments' as TabKey, label: 'Payments' }] : []),
     { key: 'credentials', label: 'Credentials' },
-    { key: 'files', label: 'Files' }
-  ] as const
+    { key: 'files', label: 'Files' },
+    { key: 'time', label: 'Time' },
+    { key: 'env', label: '.env' },
+    { key: 'scripts', label: 'Scripts' },
+    ...(!isPersonal ? [{ key: 'invoice' as TabKey, label: 'Invoice' }] : []),
+  ]
 
   return (
     <div className="h-full flex flex-col">
@@ -355,6 +364,30 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
             {activeTab === 'files' && (
               <div className="p-6">
                 <FileManager projectId={project.id} />
+              </div>
+            )}
+
+            {activeTab === 'time' && (
+              <div className="p-6">
+                <TimeTracker projectId={project.id} />
+              </div>
+            )}
+
+            {activeTab === 'env' && (
+              <div className="p-6">
+                <EnvManager projectId={project.id} />
+              </div>
+            )}
+
+            {activeTab === 'scripts' && (
+              <div className="p-6">
+                <ScriptRunner projectId={project.id} />
+              </div>
+            )}
+
+            {activeTab === 'invoice' && !isPersonal && (
+              <div className="p-6">
+                <InvoiceGenerator project={project} />
               </div>
             )}
           </motion.div>

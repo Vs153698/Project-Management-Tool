@@ -25,10 +25,27 @@ const api = {
   codeGenerate: (payload) => electron.ipcRenderer.invoke("code:generate", payload),
   codeListFolders: (projectId) => electron.ipcRenderer.invoke("code:list-folders", projectId),
   codeDeleteFolder: (payload) => electron.ipcRenderer.invoke("code:delete-folder", payload),
+  codeDeleteDepDir: (payload) => electron.ipcRenderer.invoke("code:delete-dep-dir", payload),
   gitClone: (payload) => electron.ipcRenderer.invoke("git:clone", payload),
   gitPull: (payload) => electron.ipcRenderer.invoke("git:pull", payload),
   openInVscode: (projectId) => electron.ipcRenderer.invoke("project:open-in-vscode", projectId),
-  openInAntigravity: (projectId) => electron.ipcRenderer.invoke("project:open-in-antigravity", projectId)
+  openInAntigravity: (projectId) => electron.ipcRenderer.invoke("project:open-in-antigravity", projectId),
+  backupExport: (pin) => electron.ipcRenderer.invoke("backup:export", pin),
+  backupImport: (pin) => electron.ipcRenderer.invoke("backup:import", pin),
+  scriptList: (payload) => electron.ipcRenderer.invoke("script:list", payload),
+  scriptRun: (payload) => electron.ipcRenderer.invoke("script:run", payload),
+  scriptStop: (key) => electron.ipcRenderer.invoke("script:stop", key),
+  onScriptOutput: (callback) => {
+    const handler = (_, payload) => callback(payload);
+    electron.ipcRenderer.on("script:output", handler);
+    return () => electron.ipcRenderer.off("script:output", handler);
+  },
+  onScriptDone: (callback) => {
+    const handler = (_, payload) => callback(payload);
+    electron.ipcRenderer.on("script:done", handler);
+    return () => electron.ipcRenderer.off("script:done", handler);
+  },
+  invoiceGenerate: (payload) => electron.ipcRenderer.invoke("invoice:generate", payload)
 };
 if (process.contextIsolated) {
   try {

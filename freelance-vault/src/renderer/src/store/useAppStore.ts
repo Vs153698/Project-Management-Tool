@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { User, Project, Payment, Credential, Database, AppView } from '../types'
+import type { User, Project, Payment, Credential, Database, AppView, BankDetail } from '../types'
 
 interface AppStore {
   user: User | null
@@ -34,6 +34,12 @@ interface AppStore {
   addCredential: (credential: Credential) => Promise<void>
   deleteCredential: (id: string) => Promise<void>
 
+  bankDetails: BankDetail[]
+  loadBankDetails: () => Promise<void>
+  saveBankDetail: (detail: BankDetail) => Promise<void>
+  updateBankDetail: (id: string, updates: Partial<BankDetail>) => Promise<void>
+  deleteBankDetail: (id: string) => Promise<void>
+
   clearError: () => void
 }
 
@@ -49,6 +55,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   selectedProjectId: null,
   isLoading: true,
   error: null,
+  bankDetails: [],
 
   initialize: async () => {
     set({ isLoading: true })
@@ -75,6 +82,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       if (result.success && result.user) {
         set({ isAuthenticated: true, user: result.user })
         await get().loadDb()
+        await get().loadBankDetails()
         return true
       }
       return false
@@ -90,6 +98,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       if (result.success && result.user) {
         set({ isAuthenticated: true, user: result.user })
         await get().loadDb()
+        await get().loadBankDetails()
         return true
       }
       return false
@@ -174,6 +183,46 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteCredential: async (id: string) => {
     const { db, saveDb } = get()
     await saveDb({ ...db, credentials: db.credentials.filter((c) => c.id !== id) })
+  },
+
+  loadBankDetails: async () => {
+    try {
+      const result = await window.electron.bankGet()
+      if (result.success) set({ bankDetails: (result.data as BankDetail[]) || [] })
+    } catch (err) {
+      set({ error: String(err) })
+    }
+  },
+
+  saveBankDetail: async (detail: BankDetail) => {
+    const { bankDetails } = get()
+    const existing = bankDetails.find((b) => b.id === detail.id)
+    let updated: BankDetail[]
+    if (existing) {
+      updated = bankDetails.map((b) => (b.id === detail.id ? detail : b))
+    } else {
+      // If new detail is default, clear others
+      updated = detail.isDefault
+        ? [...bankDetails.map((b) => ({ ...b, isDefault: false })), detail]
+        : [...bankDetails, detail]
+    }
+    set({ bankDetails: updated })
+    await window.electron.bankSave(updated)
+  },
+
+  updateBankDetail: async (id: string, updates: Partial<BankDetail>) => {
+    const { bankDetails } = get()
+    let updated = bankDetails.map((b) => (b.id === id ? { ...b, ...updates } : b))
+    if (updates.isDefault) updated = updated.map((b) => (b.id === id ? b : { ...b, isDefault: false }))
+    set({ bankDetails: updated })
+    await window.electron.bankSave(updated)
+  },
+
+  deleteBankDetail: async (id: string) => {
+    const { bankDetails } = get()
+    const updated = bankDetails.filter((b) => b.id !== id)
+    set({ bankDetails: updated })
+    await window.electron.bankSave(updated)
   },
 
   clearError: () => set({ error: null })

@@ -5,6 +5,7 @@ import Dashboard from '../dashboard/Dashboard'
 import ProjectList from '../projects/ProjectList'
 import ProjectDetail from '../projects/ProjectDetail'
 import Analytics from '../analytics/Analytics'
+import BankDetailsPage from '../banking/BankDetailsPage'
 
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
@@ -25,6 +26,8 @@ export default function AppLayout(): JSX.Element {
         return selectedProjectId ? <ProjectDetail projectId={selectedProjectId} /> : <ProjectList />
       case 'analytics':
         return <Analytics />
+      case 'bank-details':
+        return <BankDetailsPage />
       default:
         return <Dashboard />
     }

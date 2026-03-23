@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import type { Credential } from '../../types'
+import ConfirmDeleteModal from '../ui/ConfirmDeleteModal'
 
 const PIN_LENGTH = 4
 
@@ -151,9 +152,9 @@ function UnlockVault({ onUnlock, onCancel }: UnlockVaultProps): JSX.Element {
           {Array.from({ length: PIN_LENGTH }).map((_, i) => (
             <motion.div
               key={i}
-              animate={{ backgroundColor: i < pin.length ? (error ? '#ef4444' : '#7c3aed') : 'rgba(37,37,56,1)' }}
+              animate={{ backgroundColor: i < pin.length ? (error ? '#ef4444' : '#3D6EF5') : '#E5E7EB' }}
               className="w-3 h-3 rounded-full border-2"
-              style={{ borderColor: i < pin.length ? (error ? '#ef4444' : '#7c3aed') : '#252538' }}
+              style={{ borderColor: i < pin.length ? (error ? '#ef4444' : '#3D6EF5') : '#D1D5DB' }}
             />
           ))}
         </motion.div>
@@ -186,10 +187,10 @@ function UnlockVault({ onUnlock, onCancel }: UnlockVaultProps): JSX.Element {
                     {row.map((d) => (
                       <motion.button
                         key={d}
-                        whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                        whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                         onClick={() => pressKey(d)}
                         className="w-14 h-11 rounded-xl text-base font-semibold text-text flex items-center justify-center select-none"
-                        style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                        style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                       >
                         {d}
                       </motion.button>
@@ -199,10 +200,10 @@ function UnlockVault({ onUnlock, onCancel }: UnlockVaultProps): JSX.Element {
                 <div className="flex gap-2">
                   <div className="w-14 h-11" />
                   <motion.button
-                    whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                    whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                     onClick={() => pressKey('0')}
                     className="w-14 h-11 rounded-xl text-base font-semibold text-text flex items-center justify-center"
-                    style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                    style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                   >
                     0
                   </motion.button>
@@ -211,7 +212,7 @@ function UnlockVault({ onUnlock, onCancel }: UnlockVaultProps): JSX.Element {
                     onClick={deleteKey}
                     disabled={pin.length === 0}
                     className="w-14 h-11 rounded-xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20"
-                    style={{ background: 'rgba(37,37,56,0.3)' }}
+                    style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}
                   >
                     <Delete size={15} />
                   </motion.button>
@@ -465,6 +466,7 @@ export default function CredentialVault({ projectId }: { projectId: string }): J
   const [vaultUnlocked, setVaultUnlocked] = useState(false)
   const [showUnlock, setShowUnlock] = useState(false)
   const [lockTimer, setLockTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Credential | null>(null)
 
   const credentials = useMemo(
     () => db.credentials.filter((c) => c.projectId === projectId),
@@ -550,7 +552,7 @@ export default function CredentialVault({ projectId }: { projectId: string }): J
                 cred={cred}
                 vaultUnlocked={vaultUnlocked}
                 onRevealRequest={() => setShowUnlock(true)}
-                onDelete={() => deleteCredential(cred.id)}
+                onDelete={() => setPendingDelete(cred)}
               />
             ))}
           </AnimatePresence>
@@ -561,6 +563,15 @@ export default function CredentialVault({ projectId }: { projectId: string }): J
         {showAdd && <AddCredentialModal projectId={projectId} onClose={() => setShowAdd(false)} />}
         {showUnlock && <UnlockVault onUnlock={unlock} onCancel={() => setShowUnlock(false)} />}
       </AnimatePresence>
+
+      <ConfirmDeleteModal
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => { if (pendingDelete) await deleteCredential(pendingDelete.id) }}
+        itemType="credential"
+        itemName={pendingDelete?.label ?? ''}
+        requireTypedConfirm
+      />
     </div>
   )
 }

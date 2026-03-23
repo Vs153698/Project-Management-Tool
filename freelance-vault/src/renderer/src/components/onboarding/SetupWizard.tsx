@@ -67,11 +67,11 @@ function PinField({ pin, onChange, error, autoFocus = true }: PinFieldProps): JS
             key={i}
             animate={{
               scale: i === pin.length - 1 ? [1.3, 1] : 1,
-              backgroundColor: i < pin.length ? (error ? '#ef4444' : '#7c3aed') : 'rgba(37,37,56,1)'
+              backgroundColor: i < pin.length ? (error ? '#ef4444' : '#3D6EF5') : '#E5E7EB'
             }}
             transition={{ duration: 0.15 }}
             className="w-3.5 h-3.5 rounded-full border-2"
-            style={{ borderColor: i < pin.length ? (error ? '#ef4444' : '#7c3aed') : '#252538' }}
+            style={{ borderColor: i < pin.length ? (error ? '#ef4444' : '#3D6EF5') : '#D1D5DB' }}
           />
         ))}
       </div>
@@ -105,10 +105,10 @@ function PinField({ pin, onChange, error, autoFocus = true }: PinFieldProps): JS
                     <motion.button
                       key={d}
                       type="button"
-                      whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                      whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                       onClick={() => pressKey(d)}
                       className="w-14 h-12 rounded-xl text-lg font-semibold text-text flex items-center justify-center select-none"
-                      style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                      style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                     >
                       {d}
                     </motion.button>
@@ -119,10 +119,10 @@ function PinField({ pin, onChange, error, autoFocus = true }: PinFieldProps): JS
                 <div className="w-14 h-12" />
                 <motion.button
                   type="button"
-                  whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                  whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                   onClick={() => pressKey('0')}
                   className="w-14 h-12 rounded-xl text-lg font-semibold text-text flex items-center justify-center select-none"
-                  style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                  style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                 >
                   0
                 </motion.button>
@@ -132,7 +132,7 @@ function PinField({ pin, onChange, error, autoFocus = true }: PinFieldProps): JS
                   onClick={deleteKey}
                   disabled={pin.length === 0}
                   className="w-14 h-12 rounded-xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20"
-                  style={{ background: 'rgba(37,37,56,0.3)' }}
+                  style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}
                 >
                   <Delete size={16} />
                 </motion.button>
@@ -261,11 +261,11 @@ export default function SetupWizard(): JSX.Element {
     <div className="h-screen w-screen bg-background flex items-center justify-center overflow-hidden relative">
       <motion.div
         className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%)', top: '-20%', left: '-15%' }}
+        style={{ background: 'radial-gradient(circle, rgba(61,110,245,0.09) 0%, transparent 70%)', top: '-20%', left: '-15%' }}
       />
       <motion.div
         className="absolute w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)', bottom: '-10%', right: '-10%' }}
+        style={{ background: 'radial-gradient(circle, rgba(16,201,160,0.07) 0%, transparent 70%)', bottom: '-10%', right: '-10%' }}
       />
       <div className="absolute top-0 left-0 right-0 h-10 drag-region" />
 
@@ -428,7 +428,7 @@ export default function SetupWizard(): JSX.Element {
               disabled={isLoading}
               whileTap={{ scale: 0.97 }}
               className="px-5 py-2.5 rounded-xl font-semibold text-white flex items-center gap-2 text-sm disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)', boxShadow: '0 4px 20px rgba(124,58,237,0.25)' }}
+              style={{ background: 'linear-gradient(135deg, #3D6EF5 0%, #10C9A0 100%)', boxShadow: '0 4px 20px rgba(61,110,245,0.30)' }}
             >
               {isLoading ? (
                 <div className="flex gap-1">

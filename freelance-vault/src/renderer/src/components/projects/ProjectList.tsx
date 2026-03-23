@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, FolderOpen, Calendar, Tag, ChevronRight } from 'lucide-react'
+import { Plus, Search, FolderOpen, Calendar, Tag, ChevronRight, User, Briefcase } from 'lucide-react'
 import { format, isPast, parseISO } from 'date-fns'
 import { useAppStore } from '../../store/useAppStore'
 import CreateProjectModal from './CreateProjectModal'
@@ -30,7 +30,9 @@ function formatCurrency(amount: number, currency = 'USD'): string {
   }
 }
 
-function ProjectCard({ project, paidAmount, onClick, displayCurrency }: { project: Project; paidAmount: number; onClick: () => void; displayCurrency: string }) {
+function FreelanceCard({ project, paidAmount, onClick, displayCurrency }: {
+  project: Project; paidAmount: number; onClick: () => void; displayCurrency: string
+}) {
   const pct = project.projectCost > 0 ? Math.min(100, (paidAmount / project.projectCost) * 100) : 0
   const isOverdue = project.deadline && isPast(parseISO(project.deadline)) && project.status !== 'completed' && project.status !== 'cancelled'
 
@@ -63,12 +65,9 @@ function ProjectCard({ project, paidAmount, onClick, displayCurrency }: { projec
         </div>
       </div>
 
-      {/* Payment progress */}
       <div className="mb-3">
         <div className="flex justify-between text-xs text-text-muted mb-1.5">
-          <span>
-            {formatCurrency(paidAmount, displayCurrency)} paid
-          </span>
+          <span>{formatCurrency(paidAmount, displayCurrency)} paid</span>
           <span>{formatCurrency(project.projectCost, displayCurrency)}</span>
         </div>
         <div className="w-full bg-border rounded-full h-1.5">
@@ -79,14 +78,65 @@ function ProjectCard({ project, paidAmount, onClick, displayCurrency }: { projec
         </div>
       </div>
 
-      {/* Deadline + Tags */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           {project.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border"
-            >
+            <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border">
+              <Tag size={9} />
+              {tag}
+            </span>
+          ))}
+        </div>
+        {project.deadline && (
+          <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-danger' : 'text-text-muted'}`}>
+            <Calendar size={11} />
+            {format(parseISO(project.deadline), 'MMM d')}
+            {isOverdue && <span className="font-medium">· Overdue</span>}
+          </div>
+        )}
+      </div>
+    </motion.button>
+  )
+}
+
+function PersonalCard({ project, onClick }: { project: Project; onClick: () => void }) {
+  const isOverdue = project.deadline && isPast(parseISO(project.deadline)) && project.status !== 'completed' && project.status !== 'cancelled'
+
+  return (
+    <motion.button
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      onClick={onClick}
+      className="card text-left w-full hover:border-accent/30 transition-all duration-200 group"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="badge bg-accent/10 text-accent border border-accent/20 text-[10px]">Personal</span>
+          </div>
+          <h3 className="font-semibold text-text truncate group-hover:text-accent transition-colors">
+            {project.projectName}
+          </h3>
+          {project.description && (
+            <p className="text-text-muted text-xs mt-0.5 truncate">{project.description}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 ml-2 shrink-0">
+          <span className={`badge border ${statusColors[project.status] || ''}`}>
+            {statusLabels[project.status] || project.status}
+          </span>
+          <ChevronRight size={14} className="text-text-muted group-hover:text-accent transition-colors" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          {project.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border">
               <Tag size={9} />
               {tag}
             </span>
@@ -110,28 +160,34 @@ export default function ProjectList(): JSX.Element {
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [tab, setTab] = useState<'all' | 'freelance' | 'personal'>('all')
 
   const paidByProject = useMemo(() => {
     const map: Record<string, number> = {}
-    payments.forEach((p) => {
-      map[p.projectId] = (map[p.projectId] || 0) + p.amount
-    })
+    payments.forEach((p) => { map[p.projectId] = (map[p.projectId] || 0) + p.amount })
     return map
   }, [payments])
 
   const filtered = useMemo(() => {
     return projects.filter((p) => {
+      const type = p.projectType || 'freelance'
+      const matchTab = tab === 'all' || type === tab
       const matchSearch =
         !search ||
         p.projectName.toLowerCase().includes(search.toLowerCase()) ||
         p.clientName.toLowerCase().includes(search.toLowerCase()) ||
         p.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
       const matchStatus = filterStatus === 'all' || p.status === filterStatus
-      return matchSearch && matchStatus
+      return matchTab && matchSearch && matchStatus
     })
-  }, [projects, search, filterStatus])
+  }, [projects, search, filterStatus, tab])
+
+  const freelanceProjects = filtered.filter((p) => (p.projectType || 'freelance') === 'freelance')
+  const personalProjects = filtered.filter((p) => p.projectType === 'personal')
 
   const statuses = ['all', 'not_started', 'in_progress', 'completed', 'on_hold', 'cancelled']
+  const totalFreelance = projects.filter((p) => (p.projectType || 'freelance') === 'freelance').length
+  const totalPersonal = projects.filter((p) => p.projectType === 'personal').length
 
   return (
     <div className="p-8">
@@ -140,7 +196,7 @@ export default function ProjectList(): JSX.Element {
         <div>
           <h1 className="text-2xl font-bold text-text">Projects</h1>
           <p className="text-text-muted text-sm mt-0.5">
-            {projects.length} project{projects.length !== 1 ? 's' : ''} total
+            {totalFreelance} freelance · {totalPersonal} personal
           </p>
         </div>
         <motion.button
@@ -153,9 +209,29 @@ export default function ProjectList(): JSX.Element {
         </motion.button>
       </div>
 
-      {/* Filters */}
+      {/* Tabs + Filters */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+        {/* Type tabs */}
+        <div className="flex gap-1 p-1 bg-surface border border-border rounded-xl">
+          {([
+            { key: 'all', label: 'All', icon: FolderOpen },
+            { key: 'freelance', label: 'Freelance', icon: Briefcase },
+            { key: 'personal', label: 'Personal', icon: User },
+          ] as const).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                tab === key ? 'bg-primary text-white shadow-sm' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              <Icon size={12} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
@@ -165,15 +241,14 @@ export default function ProjectList(): JSX.Element {
             className="input pl-9 py-2"
           />
         </div>
+
         <div className="flex gap-1 bg-surface border border-border rounded-lg p-1">
           {statuses.map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                filterStatus === s
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:text-text'
+                filterStatus === s ? 'bg-primary text-white' : 'text-text-muted hover:text-text'
               }`}
             >
               {s === 'all' ? 'All' : statusLabels[s] || s}
@@ -182,7 +257,6 @@ export default function ProjectList(): JSX.Element {
         </div>
       </div>
 
-      {/* Grid */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-text-muted">
           <FolderOpen size={48} className="mb-4 opacity-20" />
@@ -202,19 +276,57 @@ export default function ProjectList(): JSX.Element {
           )}
         </div>
       ) : (
-        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <AnimatePresence>
-            {filtered.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                paidAmount={paidByProject[project.id] || 0}
-                onClick={() => setView('project-detail', project.id)}
-                displayCurrency={displayCurrency}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <div className="space-y-8">
+          {/* Freelance section */}
+          {(tab === 'all' || tab === 'freelance') && freelanceProjects.length > 0 && (
+            <div>
+              {tab === 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Briefcase size={14} className="text-primary" />
+                  <h2 className="text-sm font-semibold text-text">Freelance</h2>
+                  <span className="text-text-muted text-xs">({freelanceProjects.length})</span>
+                </div>
+              )}
+              <motion.div layout className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <AnimatePresence>
+                  {freelanceProjects.map((project) => (
+                    <FreelanceCard
+                      key={project.id}
+                      project={project}
+                      paidAmount={paidByProject[project.id] || 0}
+                      onClick={() => setView('project-detail', project.id)}
+                      displayCurrency={displayCurrency}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Personal section */}
+          {(tab === 'all' || tab === 'personal') && personalProjects.length > 0 && (
+            <div>
+              {tab === 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <User size={14} className="text-accent" />
+                  <h2 className="text-sm font-semibold text-text">Personal</h2>
+                  <span className="text-text-muted text-xs">({personalProjects.length})</span>
+                </div>
+              )}
+              <motion.div layout className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <AnimatePresence>
+                  {personalProjects.map((project) => (
+                    <PersonalCard
+                      key={project.id}
+                      project={project}
+                      onClick={() => setView('project-detail', project.id)}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </div>
       )}
 
       <AnimatePresence>

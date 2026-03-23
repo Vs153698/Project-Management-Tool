@@ -4,6 +4,7 @@ import { Plus, Trash2, X, DollarSign } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '../../store/useAppStore'
 import type { Project, Payment } from '../../types'
+import ConfirmDeleteModal from '../ui/ConfirmDeleteModal'
 
 const typeColors: Record<string, string> = {
   advance: 'bg-accent text-white',
@@ -171,6 +172,7 @@ export default function PaymentTimeline({ project }: { project: Project }): JSX.
   const { db, deletePayment, displayCurrency } = useAppStore()
   const [showAdd, setShowAdd] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Payment | null>(null)
 
   const payments = useMemo(
     () =>
@@ -184,9 +186,10 @@ export default function PaymentTimeline({ project }: { project: Project }): JSX.
   const remaining = Math.max(0, project.projectCost - totalPaid)
   const pct = project.projectCost > 0 ? Math.min(100, (totalPaid / project.projectCost) * 100) : 0
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id)
-    await deletePayment(id)
+  const handleDelete = async () => {
+    if (!pendingDelete) return
+    setDeletingId(pendingDelete.id)
+    await deletePayment(pendingDelete.id)
     setDeletingId(null)
   }
 
@@ -226,7 +229,7 @@ export default function PaymentTimeline({ project }: { project: Project }): JSX.
             animate={{ width: `${pct}%` }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
             className="h-3 rounded-full"
-            style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)' }}
+            style={{ background: 'linear-gradient(90deg, #3D6EF5 0%, #10C9A0 100%)' }}
           />
         </div>
         <div className="flex justify-between text-xs text-text-muted mt-1.5">
@@ -305,7 +308,7 @@ export default function PaymentTimeline({ project }: { project: Project }): JSX.
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => handleDelete(payment.id)}
+                        onClick={() => setPendingDelete(payment)}
                         disabled={deletingId === payment.id}
                         className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger transition-all p-1 rounded-lg hover:bg-danger/10 shrink-0"
                       >
@@ -329,6 +332,15 @@ export default function PaymentTimeline({ project }: { project: Project }): JSX.
           />
         )}
       </AnimatePresence>
+
+      <ConfirmDeleteModal
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+        itemType="payment"
+        itemName={pendingDelete ? `${typeLabels[pendingDelete.type]} — ${formatCurrency(pendingDelete.amount, displayCurrency)}` : ''}
+        description={pendingDelete ? `Delete the ${typeLabels[pendingDelete.type].toLowerCase()} payment of ${formatCurrency(pendingDelete.amount, displayCurrency)} on ${format(parseISO(pendingDelete.date), 'MMM d, yyyy')}? This cannot be undone.` : undefined}
+      />
     </div>
   )
 }

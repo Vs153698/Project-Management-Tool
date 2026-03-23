@@ -44,7 +44,7 @@ function formatFull(amount: number, currency = 'USD'): string {
 
 const STATUS_COLORS: Record<string, string> = {
   not_started: '#64748b',
-  in_progress: '#06b6d4',
+  in_progress: '#10C9A0',
   completed: '#10b981',
   on_hold: '#f59e0b',
   cancelled: '#ef4444'
@@ -59,15 +59,16 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const PAYMENT_TYPE_COLORS: Record<string, string> = {
-  advance: '#06b6d4',
-  milestone: '#7c3aed',
+  advance: '#10C9A0',
+  milestone: '#3D6EF5',
   final: '#10b981',
   other: '#64748b'
 }
 
 export default function Analytics(): JSX.Element {
   const { db, displayCurrency } = useAppStore()
-  const { projects, payments } = db
+  const { payments } = db
+  const projects = db.projects.filter((p) => (p.projectType || 'freelance') === 'freelance')
 
   // Monthly revenue — last 12 months
   const monthlyRevenue = useMemo(() => {
@@ -142,7 +143,7 @@ export default function Analytics(): JSX.Element {
   }, [projects, payments])
 
   const tooltipStyle = {
-    contentStyle: { background: '#1a1a27', border: '1px solid #252538', borderRadius: '8px', color: '#f1f5f9', fontSize: 12 }
+    contentStyle: { background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827', fontSize: 12 }
   }
 
   return (
@@ -201,14 +202,14 @@ export default function Analytics(): JSX.Element {
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthlyRevenue} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#252538" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
               <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyShort(v, displayCurrency)} />
               <Tooltip {...tooltipStyle} formatter={(v: number) => [formatFull(v, displayCurrency), 'Revenue']} />
               <defs>
                 <linearGradient id="revBar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#06b6d4" />
+                  <stop offset="0%" stopColor="#3D6EF5" />
+                  <stop offset="100%" stopColor="#10C9A0" />
                 </linearGradient>
               </defs>
               <Bar dataKey="revenue" fill="url(#revBar)" radius={[4, 4, 0, 0]} maxBarSize={36} />
@@ -338,17 +339,17 @@ export default function Analytics(): JSX.Element {
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={monthlyRevenue} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#252538" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
               <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyShort(v, displayCurrency)} />
               <Tooltip {...tooltipStyle} formatter={(v: number) => [formatFull(v), 'Revenue']} />
               <defs>
                 <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#06b6d4" />
+                  <stop offset="0%" stopColor="#3D6EF5" />
+                  <stop offset="100%" stopColor="#10C9A0" />
                 </linearGradient>
               </defs>
-              <Line type="monotone" dataKey="revenue" stroke="url(#lineGrad)" strokeWidth={2.5} dot={{ fill: '#7c3aed', r: 3 }} activeDot={{ r: 5, fill: '#06b6d4' }} />
+              <Line type="monotone" dataKey="revenue" stroke="url(#lineGrad)" strokeWidth={2.5} dot={{ fill: '#3D6EF5', r: 3 }} activeDot={{ r: 5, fill: '#10C9A0' }} />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>

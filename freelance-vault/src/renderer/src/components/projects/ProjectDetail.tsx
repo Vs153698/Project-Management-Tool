@@ -10,7 +10,10 @@ import {
   User,
   DollarSign,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Code2,
+  Zap,
+  Github
 } from 'lucide-react'
 import { format, isPast, parseISO } from 'date-fns'
 import { useAppStore } from '../../store/useAppStore'
@@ -18,6 +21,7 @@ import CreateProjectModal from './CreateProjectModal'
 import PaymentTimeline from '../payments/PaymentTimeline'
 import CredentialVault from '../credentials/CredentialVault'
 import FileManager from '../files/FileManager'
+import ConfirmDeleteModal from '../ui/ConfirmDeleteModal'
 
 const statusColors: Record<string, string> = {
   not_started: 'text-text-muted bg-text-muted/10 border-text-muted/20',
@@ -110,12 +114,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
     window.electron.folderOpen(folderPath)
   }
 
+  const openInVscode = () => window.electron.openInVscode(project.id)
+  const openInAntigravity = () => window.electron.openInAntigravity(project.id)
+
   const pct =
     project.projectCost > 0 ? Math.min(100, (totalPaid / project.projectCost) * 100) : 0
 
+  const isPersonal = project.projectType === 'personal'
+
   const tabs = [
     { key: 'overview', label: 'Overview' },
-    { key: 'payments', label: 'Payments' },
+    ...(!isPersonal ? [{ key: 'payments', label: 'Payments' }] : []),
     { key: 'credentials', label: 'Credentials' },
     { key: 'files', label: 'Files' }
   ] as const
@@ -138,8 +147,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
 
         <div className="flex items-start justify-between mb-5">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-xl font-bold text-text">{project.projectName}</h1>
+              {isPersonal && (
+                <span className="badge bg-accent/10 text-accent border border-accent/20">Personal</span>
+              )}
               <span className={`badge border ${statusColors[project.status] || ''}`}>
                 {statusLabels[project.status] || project.status}
               </span>
@@ -153,13 +165,29 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
             <p className="text-text-muted text-sm">{project.clientName}</p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             <button
               onClick={openFolder}
               className="btn-secondary text-sm py-1.5 px-3"
             >
               <FolderOpen size={14} />
               Open Folder
+            </button>
+            <button
+              onClick={openInVscode}
+              title="Open project folder in VS Code"
+              className="btn-secondary text-sm py-1.5 px-3"
+            >
+              <Code2 size={14} />
+              VS Code
+            </button>
+            <button
+              onClick={openInAntigravity}
+              title="Open project folder in Antigravity"
+              className="btn-secondary text-sm py-1.5 px-3"
+            >
+              <Zap size={14} />
+              Antigravity
             </button>
             <button
               onClick={() => setShowEdit(true)}
@@ -177,8 +205,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
           </div>
         </div>
 
-        {/* Payment summary bar */}
-        <div className="flex items-center gap-6 mb-5 p-3 bg-surface rounded-xl border border-border">
+        {/* Payment summary bar — freelance only */}
+        {!isPersonal && <div className="flex items-center gap-6 mb-5 p-3 bg-surface rounded-xl border border-border">
           <div>
             <p className="text-text-muted text-xs">Total Value</p>
             <p className="text-text font-bold">{formatCurrency(project.projectCost, displayCurrency)}</p>
@@ -205,7 +233,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
               />
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Tabs */}
         <div className="flex gap-1">
@@ -260,6 +288,25 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
                   />
                 </div>
 
+                {project.githubUrl && (
+                  <div className="flex items-center gap-3 p-3 bg-surface border border-border rounded-xl">
+                    <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0">
+                      <Github size={14} className="text-text-muted" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-text-muted text-xs">GitHub Repository</p>
+                      <a
+                        href={project.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary text-sm font-medium truncate block hover:underline"
+                      >
+                        {project.githubUrl.replace('https://github.com/', '')}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {project.description && (
                   <div>
                     <p className="label">Description</p>
@@ -293,7 +340,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
               </div>
             )}
 
-            {activeTab === 'payments' && (
+            {activeTab === 'payments' && !isPersonal && (
               <div className="p-6">
                 <PaymentTimeline project={project} />
               </div>
@@ -322,39 +369,15 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
       </AnimatePresence>
 
       {/* Delete confirm */}
-      <AnimatePresence>
-        {confirmDelete && (
-          <div className="modal-overlay" onClick={() => setConfirmDelete(false)}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={20} className="text-danger" />
-              </div>
-              <h3 className="text-lg font-bold text-text text-center mb-2">Delete Project?</h3>
-              <p className="text-text-muted text-sm text-center mb-6">
-                This will permanently delete &ldquo;{project.projectName}&rdquo; and all its
-                payments and credentials. This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="btn-secondary flex-1 justify-center"
-                >
-                  Cancel
-                </button>
-                <button onClick={handleDelete} className="btn-danger flex-1 justify-center">
-                  Delete Project
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ConfirmDeleteModal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        itemType="project"
+        itemName={project.projectName}
+        description={`This will permanently delete "${project.projectName}" and all its payments and credentials. This action cannot be undone.`}
+        requireTypedConfirm
+      />
     </div>
   )
 }

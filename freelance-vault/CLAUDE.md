@@ -28,7 +28,7 @@ src/
       onboarding/SetupWizard.tsx    # 4-step first-run wizard (name, PIN, folder)
       layout/{AppLayout, Sidebar}   # Shell layout with navigation
       dashboard/Dashboard.tsx       # Stats, revenue chart, recent projects
-      projects/{ProjectList, CreateProjectModal, ProjectDetail}
+      projects/{ProjectList, CreateProjectModal, ProjectDetail, CodeGeneratorModal}
       payments/PaymentTimeline.tsx  # Payment history + progress tracking
       credentials/CredentialVault.tsx  # PIN/Touch ID locked credential storage
       files/FileManager.tsx         # Upload/browse project files
@@ -61,8 +61,11 @@ All renderer→main calls use `window.electron.*` (defined in `preload/index.ts`
 | `checkTouchId()` | `auth:check-touch-id` | Returns `{available}` |
 | `setupComplete({rootFolder, name, pin})` | `app:setup-complete` | Creates folder structure |
 | `dbRead()` / `dbWrite(db)` | `db:read` / `db:write` | Full DB replace on write |
-| `filesUpload({projectId, category})` | `files:upload` | Opens dialog, copies files |
-| `filesList({projectId, category})` | `files:list` | Returns `FileInfo[]` |
+| `filesUpload({projectId, category})` | `files:upload` | Opens file dialog, copies selected files |
+| `filesUploadFolder({projectId, category})` | `files:upload-folder` | Opens folder dialog, recursively copies entire folder |
+| `filesList({projectId, category})` | `files:list` | Returns `FileInfo[]` (recursive, includes `relativePath`) |
+| `filesDelete({projectId, category, relativePath})` | `files:delete` | Deletes by relative path (supports nested files) |
+| `codeGenerate({projectId, folderName, framework, initShadcn})` | `code:generate` | Scaffolds code folder inside project dir |
 
 ## Design System
 

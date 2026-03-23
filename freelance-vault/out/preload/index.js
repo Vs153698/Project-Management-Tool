@@ -11,12 +11,23 @@ const api = {
   dbRead: () => electron.ipcRenderer.invoke("db:read"),
   dbWrite: (data) => electron.ipcRenderer.invoke("db:write", data),
   filesUpload: (payload) => electron.ipcRenderer.invoke("files:upload", payload),
+  filesUploadFolder: (payload) => electron.ipcRenderer.invoke("files:upload-folder", payload),
   filesList: (payload) => electron.ipcRenderer.invoke("files:list", payload),
   filesOpen: (filePath) => electron.ipcRenderer.invoke("files:open", filePath),
   filesDelete: (payload) => electron.ipcRenderer.invoke("files:delete", payload),
   folderOpen: (folderPath) => electron.ipcRenderer.invoke("folder:open", folderPath),
   projectCreateFolders: (projectId) => electron.ipcRenderer.invoke("project:create-folders", projectId),
-  projectGetFolder: (projectId) => electron.ipcRenderer.invoke("project:get-folder", projectId)
+  projectGetFolder: (projectId) => electron.ipcRenderer.invoke("project:get-folder", projectId),
+  bankGet: () => electron.ipcRenderer.invoke("bank:get"),
+  bankSave: (details) => electron.ipcRenderer.invoke("bank:save", details),
+  bankCopyImage: (dataUrl) => electron.ipcRenderer.invoke("bank:copy-image", dataUrl),
+  bankSaveImage: (dataUrl) => electron.ipcRenderer.invoke("bank:save-image", dataUrl),
+  codeGenerate: (payload) => electron.ipcRenderer.invoke("code:generate", payload),
+  codeListFolders: (projectId) => electron.ipcRenderer.invoke("code:list-folders", projectId),
+  codeDeleteFolder: (payload) => electron.ipcRenderer.invoke("code:delete-folder", payload),
+  gitClone: (payload) => electron.ipcRenderer.invoke("git:clone", payload),
+  openInVscode: (projectId) => electron.ipcRenderer.invoke("project:open-in-vscode", projectId),
+  openInAntigravity: (projectId) => electron.ipcRenderer.invoke("project:open-in-antigravity", projectId)
 };
 if (process.contextIsolated) {
   try {

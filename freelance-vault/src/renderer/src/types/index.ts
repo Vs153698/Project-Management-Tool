@@ -4,6 +4,7 @@ export interface User {
 
 export interface Project {
   id: string
+  projectType?: 'freelance' | 'personal'
   clientName: string
   projectName: string
   middleman?: string
@@ -15,6 +16,7 @@ export interface Project {
   startDate?: string
   endDate?: string
   deadline?: string
+  githubUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -47,10 +49,37 @@ export interface Database {
   credentials: Credential[]
 }
 
-export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics'
+export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details'
+
+export interface BankDetail {
+  id: string
+  label: string
+  accountHolder: string
+  bankName: string
+  accountNumber: string
+  accountType: 'savings' | 'current' | 'checking'
+  ifsc?: string
+  swift?: string
+  routingNumber?: string
+  branchName?: string
+  upiId?: string
+  paypalEmail?: string
+  notes?: string
+  isDefault: boolean
+  createdAt: string
+}
+
+export type Framework =
+  | 'vite'
+  | 'nextjs'
+  | 'node-backend'
+  | 'python-backend'
+  | 'agent-ai'
+  | 'agent-orchestration'
 
 export interface FileInfo {
   name: string
+  relativePath: string
   size: number
   modifiedAt: string
   path: string

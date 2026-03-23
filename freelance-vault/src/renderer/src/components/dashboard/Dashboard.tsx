@@ -83,7 +83,8 @@ function formatCurrency(amount: number, currency = 'USD'): string {
 
 export default function Dashboard(): JSX.Element {
   const { db, user, setView, displayCurrency } = useAppStore()
-  const { projects, payments } = db
+  const { payments } = db
+  const projects = db.projects.filter((p) => (p.projectType || 'freelance') === 'freelance')
 
   const stats = useMemo(() => {
     const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0)
@@ -227,7 +228,7 @@ export default function Dashboard(): JSX.Element {
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#252538" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                 <XAxis
                   dataKey="month"
                   tick={{ fill: '#64748b', fontSize: 12 }}
@@ -237,10 +238,10 @@ export default function Dashboard(): JSX.Element {
                 <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: '#1a1a27',
-                    border: '1px solid #252538',
+                    background: "#FFFFFF",
+                    border: "1px solid #E5E7EB",
                     borderRadius: '8px',
-                    color: '#f1f5f9'
+                    color: "#111827"
                   }}
                   formatter={(value: number) => [formatCurrency(value, displayCurrency), 'Revenue']}
                 />
@@ -252,8 +253,8 @@ export default function Dashboard(): JSX.Element {
                 />
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c3aed" />
-                    <stop offset="100%" stopColor="#06b6d4" />
+                    <stop offset="0%" stopColor="#3D6EF5" />
+                    <stop offset="100%" stopColor="#10C9A0" />
                   </linearGradient>
                 </defs>
               </BarChart>

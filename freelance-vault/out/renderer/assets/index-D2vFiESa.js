@@ -14446,6 +14446,7 @@ const useAppStore = create((set, get2) => ({
   selectedProjectId: null,
   isLoading: true,
   error: null,
+  bankDetails: [],
   initialize: async () => {
     set({ isLoading: true });
     try {
@@ -14470,6 +14471,7 @@ const useAppStore = create((set, get2) => ({
       if (result.success && result.user) {
         set({ isAuthenticated: true, user: result.user });
         await get2().loadDb();
+        await get2().loadBankDetails();
         return true;
       }
       return false;
@@ -14484,6 +14486,7 @@ const useAppStore = create((set, get2) => ({
       if (result.success && result.user) {
         set({ isAuthenticated: true, user: result.user });
         await get2().loadDb();
+        await get2().loadBankDetails();
         return true;
       }
       return false;
@@ -14557,6 +14560,39 @@ const useAppStore = create((set, get2) => ({
     const { db: db2, saveDb } = get2();
     await saveDb({ ...db2, credentials: db2.credentials.filter((c2) => c2.id !== id2) });
   },
+  loadBankDetails: async () => {
+    try {
+      const result = await window.electron.bankGet();
+      if (result.success) set({ bankDetails: result.data || [] });
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+  saveBankDetail: async (detail) => {
+    const { bankDetails } = get2();
+    const existing = bankDetails.find((b2) => b2.id === detail.id);
+    let updated;
+    if (existing) {
+      updated = bankDetails.map((b2) => b2.id === detail.id ? detail : b2);
+    } else {
+      updated = detail.isDefault ? [...bankDetails.map((b2) => ({ ...b2, isDefault: false })), detail] : [...bankDetails, detail];
+    }
+    set({ bankDetails: updated });
+    await window.electron.bankSave(updated);
+  },
+  updateBankDetail: async (id2, updates) => {
+    const { bankDetails } = get2();
+    let updated = bankDetails.map((b2) => b2.id === id2 ? { ...b2, ...updates } : b2);
+    if (updates.isDefault) updated = updated.map((b2) => b2.id === id2 ? b2 : { ...b2, isDefault: false });
+    set({ bankDetails: updated });
+    await window.electron.bankSave(updated);
+  },
+  deleteBankDetail: async (id2) => {
+    const { bankDetails } = get2();
+    const updated = bankDetails.filter((b2) => b2.id !== id2);
+    set({ bankDetails: updated });
+    await window.electron.bankSave(updated);
+  },
   clearError: () => set({ error: null })
 }));
 /**
@@ -14614,6 +14650,17 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const AlertCircle = createLucideIcon("AlertCircle", [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["line", { x1: "12", x2: "12", y1: "8", y2: "12", key: "1pkeuh" }],
+  ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16", key: "4dfq90" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const AlertTriangle = createLucideIcon("AlertTriangle", [
   [
     "path",
@@ -14624,6 +14671,17 @@ const AlertTriangle = createLucideIcon("AlertTriangle", [
   ],
   ["path", { d: "M12 9v4", key: "juzpu7" }],
   ["path", { d: "M12 17h.01", key: "p32p05" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Banknote = createLucideIcon("Banknote", [
+  ["rect", { width: "20", height: "12", x: "2", y: "6", rx: "2", key: "9lu3g6" }],
+  ["circle", { cx: "12", cy: "12", r: "2", key: "1c9p78" }],
+  ["path", { d: "M6 12h.01M18 12h.01", key: "113zkx" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -14642,11 +14700,46 @@ const BarChart2 = createLucideIcon("BarChart2", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const Briefcase = createLucideIcon("Briefcase", [
+  ["rect", { width: "20", height: "14", x: "2", y: "7", rx: "2", ry: "2", key: "eto64e" }],
+  ["path", { d: "M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", key: "zwj3tp" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Building2 = createLucideIcon("Building2", [
+  ["path", { d: "M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", key: "1b4qmf" }],
+  ["path", { d: "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", key: "i71pzd" }],
+  ["path", { d: "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", key: "10jefs" }],
+  ["path", { d: "M10 6h4", key: "1itunk" }],
+  ["path", { d: "M10 10h4", key: "tcdvrf" }],
+  ["path", { d: "M10 14h4", key: "kelpxr" }],
+  ["path", { d: "M10 18h4", key: "1ulq68" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Calendar = createLucideIcon("Calendar", [
   ["path", { d: "M8 2v4", key: "1cmpym" }],
   ["path", { d: "M16 2v4", key: "4m81vk" }],
   ["rect", { width: "18", height: "18", x: "3", y: "4", rx: "2", key: "1hopcy" }],
   ["path", { d: "M3 10h18", key: "8toen8" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const CheckCircle2 = createLucideIcon("CheckCircle2", [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -14708,9 +14801,30 @@ const Clock = createLucideIcon("Clock", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const Code2 = createLucideIcon("Code2", [
+  ["path", { d: "m18 16 4-4-4-4", key: "1inbqp" }],
+  ["path", { d: "m6 8-4 4 4 4", key: "15zrgr" }],
+  ["path", { d: "m14.5 4-5 16", key: "e7oirm" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Copy = createLucideIcon("Copy", [
   ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
   ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const CreditCard = createLucideIcon("CreditCard", [
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -14732,6 +14846,17 @@ const Delete = createLucideIcon("Delete", [
 const DollarSign = createLucideIcon("DollarSign", [
   ["line", { x1: "12", x2: "12", y1: "2", y2: "22", key: "7eqyqh" }],
   ["path", { d: "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6", key: "1b0p4s" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Download = createLucideIcon("Download", [
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["polyline", { points: "7 10 12 15 17 10", key: "2ggqvy" }],
+  ["line", { x1: "12", x2: "12", y1: "15", y2: "3", key: "1vk2je" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -14858,6 +14983,23 @@ const Fingerprint = createLucideIcon("Fingerprint", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const FolderInput = createLucideIcon("FolderInput", [
+  [
+    "path",
+    {
+      d: "M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1",
+      key: "fm4g5t"
+    }
+  ],
+  ["path", { d: "M2 13h10", key: "pgb2dq" }],
+  ["path", { d: "m9 16 3-3-3-3", key: "6m91ic" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const FolderKanban = createLucideIcon("FolderKanban", [
   [
     "path",
@@ -14884,6 +15026,37 @@ const FolderOpen = createLucideIcon("FolderOpen", [
       key: "usdka0"
     }
   ]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Folder = createLucideIcon("Folder", [
+  [
+    "path",
+    {
+      d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
+      key: "1kt360"
+    }
+  ]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Github = createLucideIcon("Github", [
+  [
+    "path",
+    {
+      d: "M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4",
+      key: "tonef"
+    }
+  ],
+  ["path", { d: "M9 18c-4.51 2-5-2-7-2", key: "9comsn" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -14949,6 +15122,15 @@ const LayoutDashboard = createLucideIcon("LayoutDashboard", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const Loader2 = createLucideIcon("Loader2", [
+  ["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Lock = createLucideIcon("Lock", [
   ["rect", { width: "18", height: "11", x: "3", y: "11", rx: "2", ry: "2", key: "1w4ew1" }],
   ["path", { d: "M7 11V7a5 5 0 0 1 10 0v4", key: "fwvmzm" }]
@@ -14963,6 +15145,25 @@ const LogOut = createLucideIcon("LogOut", [
   ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }],
   ["polyline", { points: "16 17 21 12 16 7", key: "1gabdz" }],
   ["line", { x1: "21", x2: "9", y1: "12", y2: "12", key: "1uyos4" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const MessageCircle = createLucideIcon("MessageCircle", [
+  ["path", { d: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z", key: "vv11sd" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const PenLine = createLucideIcon("PenLine", [
+  ["path", { d: "M12 20h9", key: "t2du7b" }],
+  ["path", { d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z", key: "ymcmye" }]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -15011,6 +15212,19 @@ const Search = createLucideIcon("Search", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const Share2 = createLucideIcon("Share2", [
+  ["circle", { cx: "18", cy: "5", r: "3", key: "gq8acd" }],
+  ["circle", { cx: "6", cy: "12", r: "3", key: "w7nqdw" }],
+  ["circle", { cx: "18", cy: "19", r: "3", key: "1xt0gg" }],
+  ["line", { x1: "8.59", x2: "15.42", y1: "13.51", y2: "17.49", key: "47mynk" }],
+  ["line", { x1: "15.41", x2: "8.59", y1: "6.51", y2: "10.49", key: "1n3mei" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const ShieldAlert = createLucideIcon("ShieldAlert", [
   ["path", { d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10", key: "1irkt0" }],
   ["path", { d: "M12 8v4", key: "1got3b" }],
@@ -15024,6 +15238,31 @@ const ShieldAlert = createLucideIcon("ShieldAlert", [
  */
 const Shield = createLucideIcon("Shield", [
   ["path", { d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10", key: "1irkt0" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const SkipForward = createLucideIcon("SkipForward", [
+  ["polygon", { points: "5 4 15 12 5 20 5 4", key: "16p6eg" }],
+  ["line", { x1: "19", x2: "19", y1: "5", y2: "19", key: "futhcm" }]
+]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Star = createLucideIcon("Star", [
+  [
+    "polygon",
+    {
+      points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2",
+      key: "8f66p6"
+    }
+  ]
 ]);
 /**
  * @license lucide-react v0.316.0 - ISC
@@ -15116,6 +15355,15 @@ const X = createLucideIcon("X", [
   ["path", { d: "M18 6 6 18", key: "1bl5f8" }],
   ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
 ]);
+/**
+ * @license lucide-react v0.316.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Zap = createLucideIcon("Zap", [
+  ["polygon", { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2", key: "45s27k" }]
+]);
 function AppLogo({ size = 48, className = "" }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
@@ -15129,37 +15377,37 @@ function AppLogo({ size = 48, className = "" }) {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("defs", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "fv-bg", x1: "0%", y1: "0%", x2: "100%", y2: "100%", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#1a0a2e" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0a1628" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#3D6EF5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#2B5CE5" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "fv-g1", x1: "0%", y1: "0%", x2: "100%", y2: "100%", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#7c3aed" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#06b6d4" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#3D6EF5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#10C9A0" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "fv-g2", x1: "0%", y1: "0%", x2: "100%", y2: "100%", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#9d5cf7" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#22d3ee" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#5B8AF7" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#10C9A0" })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { width: "512", height: "512", rx: "110", fill: "url(#fv-bg)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "148", fill: "none", stroke: "url(#fv-g1)", strokeWidth: "6", opacity: "0.4" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "130", fill: "#12121a" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "130", fill: "none", stroke: "url(#fv-g1)", strokeWidth: "10" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "100", fill: "none", stroke: "url(#fv-g1)", strokeWidth: "4", opacity: "0.6" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "256", y1: "148", x2: "256", y2: "178", stroke: "url(#fv-g2)", strokeWidth: "5", strokeLinecap: "round" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "356", y1: "248", x2: "326", y2: "248", stroke: "url(#fv-g2)", strokeWidth: "5", strokeLinecap: "round" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "256", y1: "348", x2: "256", y2: "318", stroke: "#252538", strokeWidth: "5", strokeLinecap: "round" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "156", y1: "248", x2: "186", y2: "248", stroke: "#252538", strokeWidth: "5", strokeLinecap: "round" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "326", y1: "178", x2: "305", y2: "199", stroke: "url(#fv-g2)", strokeWidth: "4", strokeLinecap: "round", opacity: "0.7" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "326", y1: "318", x2: "305", y2: "297", stroke: "#252538", strokeWidth: "4", strokeLinecap: "round", opacity: "0.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "186", y1: "178", x2: "207", y2: "199", stroke: "#252538", strokeWidth: "4", strokeLinecap: "round", opacity: "0.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "186", y1: "318", x2: "207", y2: "297", stroke: "#252538", strokeWidth: "4", strokeLinecap: "round", opacity: "0.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "46", fill: "#1a1a27", stroke: "url(#fv-g1)", strokeWidth: "6" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "32", fill: "url(#fv-g1)", opacity: "0.9" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "245", y: "247", width: "22", height: "16", rx: "3", fill: "white", opacity: "0.95" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M249 247 v-5 a7 7 0 0 1 14 0 v5", fill: "none", stroke: "white", strokeWidth: "3.5", strokeLinecap: "round", opacity: "0.95" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "254", r: "2.5", fill: "#1a1a27" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "368", y: "236", width: "36", height: "24", rx: "12", fill: "url(#fv-g1)", opacity: "0.85" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "148", fill: "none", stroke: "rgba(255,255,255,0.25)", strokeWidth: "6" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "130", fill: "rgba(255,255,255,0.12)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "130", fill: "none", stroke: "rgba(255,255,255,0.60)", strokeWidth: "10" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "100", fill: "none", stroke: "rgba(255,255,255,0.35)", strokeWidth: "4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "256", y1: "148", x2: "256", y2: "178", stroke: "white", strokeWidth: "5", strokeLinecap: "round", opacity: "0.9" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "356", y1: "248", x2: "326", y2: "248", stroke: "white", strokeWidth: "5", strokeLinecap: "round", opacity: "0.9" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "256", y1: "348", x2: "256", y2: "318", stroke: "white", strokeWidth: "5", strokeLinecap: "round", opacity: "0.45" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "156", y1: "248", x2: "186", y2: "248", stroke: "white", strokeWidth: "5", strokeLinecap: "round", opacity: "0.45" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "326", y1: "178", x2: "305", y2: "199", stroke: "white", strokeWidth: "4", strokeLinecap: "round", opacity: "0.7" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "326", y1: "318", x2: "305", y2: "297", stroke: "white", strokeWidth: "4", strokeLinecap: "round", opacity: "0.35" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "186", y1: "178", x2: "207", y2: "199", stroke: "white", strokeWidth: "4", strokeLinecap: "round", opacity: "0.35" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "186", y1: "318", x2: "207", y2: "297", stroke: "white", strokeWidth: "4", strokeLinecap: "round", opacity: "0.35" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "46", fill: "rgba(255,255,255,0.20)", stroke: "rgba(255,255,255,0.70)", strokeWidth: "6" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "248", r: "32", fill: "rgba(255,255,255,0.90)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "245", y: "247", width: "22", height: "16", rx: "3", fill: "#3D6EF5", opacity: "0.95" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M249 247 v-5 a7 7 0 0 1 14 0 v5", fill: "none", stroke: "#3D6EF5", strokeWidth: "3.5", strokeLinecap: "round", opacity: "0.95" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "256", cy: "254", r: "2.5", fill: "white" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "368", y: "236", width: "36", height: "24", rx: "12", fill: "rgba(255,255,255,0.70)" })
       ]
     }
   );
@@ -15237,12 +15485,12 @@ function PinInput({ onComplete, error, onErrorClear, label }) {
           {
             animate: {
               scale: i === pin.length - 1 ? [1.35, 1] : 1,
-              backgroundColor: i < pin.length ? error ? "#ef4444" : submitting ? "#06b6d4" : "#7c3aed" : "rgba(37,37,56,1)"
+              backgroundColor: i < pin.length ? error ? "#ef4444" : submitting ? "#10B981" : "#3D6EF5" : "#E5E7EB"
             },
             transition: { duration: 0.15 },
             className: "w-3.5 h-3.5 rounded-full border-2",
             style: {
-              borderColor: i < pin.length ? error ? "#ef4444" : submitting ? "#06b6d4" : "#7c3aed" : "#252538"
+              borderColor: i < pin.length ? error ? "#ef4444" : submitting ? "#10B981" : "#3D6EF5" : "#D1D5DB"
             }
           },
           i
@@ -15290,10 +15538,10 @@ function PinInput({ onComplete, error, onErrorClear, label }) {
           numRows.map((row, ri2) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-3", children: row.map((d2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             motion.button,
             {
-              whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+              whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
               onClick: () => pressKeypad(d2),
               className: "w-16 h-14 rounded-2xl text-xl font-semibold text-text flex items-center justify-center select-none transition-colors",
-              style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+              style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
               children: d2
             },
             d2
@@ -15303,10 +15551,10 @@ function PinInput({ onComplete, error, onErrorClear, label }) {
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               motion.button,
               {
-                whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+                whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
                 onClick: () => pressKeypad("0"),
                 className: "w-16 h-14 rounded-2xl text-xl font-semibold text-text flex items-center justify-center select-none",
-                style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+                style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
                 children: "0"
               }
             ),
@@ -15317,7 +15565,7 @@ function PinInput({ onComplete, error, onErrorClear, label }) {
                 onClick: deleteKeypad,
                 disabled: pin.length === 0,
                 className: "w-16 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20 transition-all",
-                style: { background: "rgba(37,37,56,0.3)" },
+                style: { background: "#F3F4F6", border: "1px solid #E5E7EB" },
                 children: /* @__PURE__ */ jsxRuntimeExports.jsx(Delete, { size: 18 })
               }
             )
@@ -15354,7 +15602,7 @@ function LoginScreen() {
       motion.div,
       {
         className: "absolute w-[700px] h-[700px] rounded-full pointer-events-none",
-        style: { background: "radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)", top: "-20%", left: "-10%" },
+        style: { background: "radial-gradient(circle, rgba(61,110,245,0.10) 0%, transparent 70%)", top: "-20%", left: "-10%" },
         animate: { scale: [1, 1.05, 1], x: [0, 20, 0] },
         transition: { duration: 18, repeat: Infinity, ease: "easeInOut" }
       }
@@ -15363,7 +15611,7 @@ function LoginScreen() {
       motion.div,
       {
         className: "absolute w-[500px] h-[500px] rounded-full pointer-events-none",
-        style: { background: "radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)", bottom: "-10%", right: "-5%" },
+        style: { background: "radial-gradient(circle, rgba(16,201,160,0.08) 0%, transparent 70%)", bottom: "-10%", right: "-5%" },
         animate: { scale: [1, 1.08, 1], x: [0, -15, 0] },
         transition: { duration: 22, repeat: Infinity, ease: "easeInOut" }
       }
@@ -15467,11 +15715,11 @@ function PinField({ pin, onChange, error, autoFocus = true }) {
           {
             animate: {
               scale: i === pin.length - 1 ? [1.3, 1] : 1,
-              backgroundColor: i < pin.length ? error ? "#ef4444" : "#7c3aed" : "rgba(37,37,56,1)"
+              backgroundColor: i < pin.length ? error ? "#ef4444" : "#3D6EF5" : "#E5E7EB"
             },
             transition: { duration: 0.15 },
             className: "w-3.5 h-3.5 rounded-full border-2",
-            style: { borderColor: i < pin.length ? error ? "#ef4444" : "#7c3aed" : "#252538" }
+            style: { borderColor: i < pin.length ? error ? "#ef4444" : "#3D6EF5" : "#D1D5DB" }
           },
           i
         ))
@@ -15510,10 +15758,10 @@ function PinField({ pin, onChange, error, autoFocus = true }) {
             motion.button,
             {
               type: "button",
-              whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+              whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
               onClick: () => pressKey(d2),
               className: "w-14 h-12 rounded-xl text-lg font-semibold text-text flex items-center justify-center select-none",
-              style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+              style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
               children: d2
             },
             d2
@@ -15524,10 +15772,10 @@ function PinField({ pin, onChange, error, autoFocus = true }) {
               motion.button,
               {
                 type: "button",
-                whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+                whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
                 onClick: () => pressKey("0"),
                 className: "w-14 h-12 rounded-xl text-lg font-semibold text-text flex items-center justify-center select-none",
-                style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+                style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
                 children: "0"
               }
             ),
@@ -15539,7 +15787,7 @@ function PinField({ pin, onChange, error, autoFocus = true }) {
                 onClick: deleteKey,
                 disabled: pin.length === 0,
                 className: "w-14 h-12 rounded-xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20",
-                style: { background: "rgba(37,37,56,0.3)" },
+                style: { background: "#F3F4F6", border: "1px solid #E5E7EB" },
                 children: /* @__PURE__ */ jsxRuntimeExports.jsx(Delete, { size: 16 })
               }
             )
@@ -15658,14 +15906,14 @@ function SetupWizard() {
       motion.div,
       {
         className: "absolute w-[600px] h-[600px] rounded-full pointer-events-none",
-        style: { background: "radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%)", top: "-20%", left: "-15%" }
+        style: { background: "radial-gradient(circle, rgba(61,110,245,0.09) 0%, transparent 70%)", top: "-20%", left: "-15%" }
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       motion.div,
       {
         className: "absolute w-[400px] h-[400px] rounded-full pointer-events-none",
-        style: { background: "radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)", bottom: "-10%", right: "-10%" }
+        style: { background: "radial-gradient(circle, rgba(16,201,160,0.07) 0%, transparent 70%)", bottom: "-10%", right: "-10%" }
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 right-0 h-10 drag-region" }),
@@ -15783,7 +16031,7 @@ function SetupWizard() {
             disabled: isLoading,
             whileTap: { scale: 0.97 },
             className: "px-5 py-2.5 rounded-xl font-semibold text-white flex items-center gap-2 text-sm disabled:opacity-50",
-            style: { background: "linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)", boxShadow: "0 4px 20px rgba(124,58,237,0.25)" },
+            style: { background: "linear-gradient(135deg, #3D6EF5 0%, #10C9A0 100%)", boxShadow: "0 4px 20px rgba(61,110,245,0.30)" },
             children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-1", children: [0, 1, 2].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { className: "w-1.5 h-1.5 rounded-full bg-white", animate: { opacity: [0.3, 1, 0.3] }, transition: { duration: 1, repeat: Infinity, delay: i * 0.15 } }, i)) }) : step === 3 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { size: 15 }),
               "Launch FreelanceVault"
@@ -15821,7 +16069,8 @@ const CURRENCIES$1 = [
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", view: "dashboard" },
   { icon: FolderKanban, label: "Projects", view: "projects" },
-  { icon: BarChart2, label: "Analytics", view: "analytics" }
+  { icon: BarChart2, label: "Analytics", view: "analytics" },
+  { icon: Banknote, label: "Bank Details", view: "bank-details" }
 ];
 function Sidebar() {
   const { currentView, setView, user, logout, displayCurrency, setCurrency } = useAppStore();
@@ -15833,108 +16082,150 @@ function Sidebar() {
     await setCurrency(code);
     setCurrencyOpen(false);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[240px] h-full flex flex-col border-r border-border bg-surface shrink-0 relative", style: { userSelect: "none" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-14 flex items-center px-5 border-b border-border drag-region", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2.5 no-drag", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(AppLogo, { size: 32 }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-text tracking-tight", children: "FreelanceVault" })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 px-3 py-4 space-y-1", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px] font-semibold uppercase tracking-wider px-3 mb-3", children: "Menu" }),
-      navItems.map(({ icon: Icon, label, view }) => {
-        const isActive = currentView === view || currentView === "project-detail" && view === "projects";
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          motion.button,
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "w-[230px] h-full flex flex-col shrink-0 relative overflow-hidden",
+      style: {
+        background: "linear-gradient(160deg, #3D6EF5 0%, #2B5CE5 100%)",
+        userSelect: "none"
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
           {
-            onClick: () => handleNav(view),
-            whileTap: { scale: 0.97 },
-            className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? "bg-primary/15 text-primary" : "text-text-muted hover:text-text hover:bg-card"}`,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { size: 17, className: isActive ? "text-primary" : "" }),
-              label,
-              isActive && /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { layoutId: "sidebar-indicator", className: "ml-auto w-1.5 h-1.5 rounded-full bg-primary" })
-            ]
-          },
-          view
-        );
-      })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 pb-2 relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px] font-semibold uppercase tracking-wider px-2 mb-2", children: "Display Currency" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        motion.button,
-        {
-          whileTap: { scale: 0.98 },
-          onClick: () => setCurrencyOpen((v2) => !v2),
-          className: "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card border border-border hover:border-primary/40 transition-colors text-sm",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-primary font-bold text-base w-6 text-center leading-none", children: selectedCurrency.symbol }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 text-left min-w-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-xs font-medium", children: selectedCurrency.code }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px] truncate", children: selectedCurrency.label })
-            ] }),
+            className: "absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none",
+            style: { background: "rgba(255,255,255,0.08)" }
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-14 flex items-center px-4 border-b drag-region", style: { borderColor: "rgba(0,0,0,0.08)" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2.5 no-drag", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppLogo, { size: 20 }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white tracking-tight text-sm", children: "FreelanceVault" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 px-3 py-4 space-y-0.5 overflow-y-auto", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "sidebar-section-label mt-1", children: "Menu" }),
+          navItems.map(({ icon: Icon, label, view }) => {
+            const isActive = currentView === view || currentView === "project-detail" && view === "projects";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              motion.button,
+              {
+                onClick: () => handleNav(view),
+                whileTap: { scale: 0.97 },
+                className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive ? "bg-white text-sidebar font-semibold shadow-sm" : "text-white/80 hover:text-white hover:bg-white/15"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Icon,
+                    {
+                      size: 17,
+                      className: isActive ? "text-sidebar" : "text-white/70"
+                    }
+                  ),
+                  label,
+                  isActive && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    motion.div,
+                    {
+                      layoutId: "sidebar-indicator",
+                      className: "ml-auto w-1.5 h-1.5 rounded-full bg-sidebar"
+                    }
+                  )
+                ]
+              },
+              view
+            );
+          })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 pb-2 relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "sidebar-section-label", children: "Currency" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.button,
+            {
+              whileTap: { scale: 0.98 },
+              onClick: () => setCurrencyOpen((v2) => !v2),
+              className: "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-sm",
+              style: { background: "rgba(0,0,0,0.12)", border: "1px solid rgba(255,255,255,0.15)" },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-base w-6 text-center leading-none", children: selectedCurrency.symbol }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 text-left min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white text-xs font-semibold", children: selectedCurrency.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white/50 text-[10px] truncate", children: selectedCurrency.label })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { animate: { rotate: currencyOpen ? 180 : 0 }, transition: { duration: 0.2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 13, className: "text-white/60" }) })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: currencyOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-40", onClick: () => setCurrencyOpen(false) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               motion.div,
               {
-                animate: { rotate: currencyOpen ? 180 : 0 },
-                transition: { duration: 0.2 },
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 13, className: "text-text-muted" })
+                initial: { opacity: 0, y: -8, scale: 0.97 },
+                animate: { opacity: 1, y: 0, scale: 1 },
+                exit: { opacity: 0, y: -8, scale: 0.97 },
+                transition: { duration: 0.15 },
+                className: "absolute bottom-full left-3 right-3 mb-1 bg-white border border-border rounded-2xl shadow-float z-50 overflow-hidden",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto py-1.5", children: CURRENCIES$1.map((c2) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    onClick: () => handleCurrencySelect(c2.code),
+                    className: `w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 transition-colors ${c2.code === displayCurrency ? "bg-primary/5" : ""}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "span",
+                        {
+                          className: `text-sm font-bold w-6 text-center ${c2.code === displayCurrency ? "text-primary" : "text-text-muted"}`,
+                          children: c2.symbol
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs font-semibold ${c2.code === displayCurrency ? "text-primary" : "text-text"}`, children: c2.code }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px] truncate", children: c2.label })
+                      ] }),
+                      c2.code === displayCurrency && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1.5 h-1.5 rounded-full bg-primary" })
+                    ]
+                  },
+                  c2.code
+                )) })
               }
             )
-          ]
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: currencyOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-40", onClick: () => setCurrencyOpen(false) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          motion.div,
+          ] }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
           {
-            initial: { opacity: 0, y: -8, scale: 0.96 },
-            animate: { opacity: 1, y: 0, scale: 1 },
-            exit: { opacity: 0, y: -8, scale: 0.96 },
-            transition: { duration: 0.15 },
-            className: "absolute bottom-full left-3 right-3 mb-1 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto py-1", children: CURRENCIES$1.map((c2) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => handleCurrencySelect(c2.code),
-                className: `w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-surface transition-colors ${c2.code === displayCurrency ? "bg-primary/10" : ""}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-bold w-6 text-center ${c2.code === displayCurrency ? "text-primary" : "text-text-muted"}`, children: c2.symbol }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs font-medium ${c2.code === displayCurrency ? "text-primary" : "text-text"}`, children: c2.code }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px] truncate", children: c2.label })
-                  ] }),
-                  c2.code === displayCurrency && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1.5 h-1.5 rounded-full bg-primary" })
-                ]
-              },
-              c2.code
-            )) })
+            className: "px-3 pb-4 pt-3",
+            style: { borderTop: "1px solid rgba(0,0,0,0.1)" },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 px-2 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-sidebar flex-shrink-0 bg-white",
+                    children: initials
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white text-sm font-semibold truncate", children: user?.name || "User" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white/50 text-xs truncate", children: "Freelancer" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                motion.button,
+                {
+                  onClick: logout,
+                  whileTap: { scale: 0.97 },
+                  className: "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-white/70 hover:text-white hover:bg-white/15",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(LogOut, { size: 16 }),
+                    "Sign Out"
+                  ]
+                }
+              )
+            ]
           }
         )
-      ] }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 pb-4 border-t border-border pt-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 px-2 py-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-xs font-bold text-white flex-shrink-0", children: initials }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium truncate", children: user?.name || "User" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs truncate", children: "Freelancer" })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        motion.button,
-        {
-          onClick: logout,
-          whileTap: { scale: 0.97 },
-          className: "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-muted hover:text-danger hover:bg-danger/10 transition-all duration-200",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(LogOut, { size: 16 }),
-            "Sign Out"
-          ]
-        }
-      )
-    ] })
-  ] });
+      ]
+    }
+  );
 }
 function r(e3) {
   var t2, f2, n2 = "";
@@ -40783,7 +41074,8 @@ function formatCurrency$3(amount, currency = "USD") {
 }
 function Dashboard() {
   const { db: db2, user, setView, displayCurrency } = useAppStore();
-  const { projects, payments } = db2;
+  const { payments } = db2;
+  const projects = db2.projects.filter((p2) => (p2.projectType || "freelance") === "freelance");
   const stats = reactExports.useMemo(() => {
     const totalRevenue = payments.reduce((sum, p2) => sum + p2.amount, 0);
     const activeProjects = projects.filter((p2) => p2.status === "in_progress").length;
@@ -40927,7 +41219,7 @@ function Dashboard() {
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "font-semibold text-text", children: "Revenue (Last 6 Months)" })
             ] }),
             payments.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-48 flex items-center justify-center text-text-muted text-sm", children: "No payment data yet" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { width: "100%", height: 200, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: monthlyData, margin: { top: 5, right: 5, left: -20, bottom: 5 }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#252538", vertical: false }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#E5E7EB", vertical: false }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 XAxis,
                 {
@@ -40942,10 +41234,10 @@ function Dashboard() {
                 Tooltip,
                 {
                   contentStyle: {
-                    background: "#1a1a27",
-                    border: "1px solid #252538",
+                    background: "#FFFFFF",
+                    border: "1px solid #E5E7EB",
                     borderRadius: "8px",
-                    color: "#f1f5f9"
+                    color: "#111827"
                   },
                   formatter: (value) => [formatCurrency$3(value, displayCurrency), "Revenue"]
                 }
@@ -40960,8 +41252,8 @@ function Dashboard() {
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "barGradient", x1: "0", y1: "0", x2: "0", y2: "1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#7c3aed" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#06b6d4" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#3D6EF5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#10C9A0" })
               ] }) })
             ] }) })
           ]
@@ -41036,6 +41328,343 @@ function Dashboard() {
     ] })
   ] });
 }
+const FRAMEWORKS = [
+  {
+    id: "vite",
+    label: "Vite + React",
+    description: "Lightning-fast React app with TypeScript",
+    badge: "Latest",
+    emoji: "⚡",
+    gradient: "from-yellow-500/15 to-orange-500/15 border-yellow-500/25 hover:border-yellow-500/50",
+    defaultName: "frontend"
+  },
+  {
+    id: "nextjs",
+    label: "Next.js",
+    description: "Full-stack React with App Router & Tailwind",
+    badge: "Latest",
+    emoji: "▲",
+    gradient: "from-slate-500/15 to-zinc-500/15 border-slate-500/25 hover:border-slate-400/50",
+    defaultName: "web"
+  },
+  {
+    id: "node-backend",
+    label: "Node.js Backend",
+    description: "Express + TypeScript REST API boilerplate",
+    badge: "Latest",
+    emoji: "🟢",
+    gradient: "from-green-500/15 to-emerald-500/15 border-green-500/25 hover:border-green-500/50",
+    defaultName: "backend"
+  },
+  {
+    id: "python-backend",
+    label: "Python Backend",
+    description: "FastAPI with async support & CORS",
+    badge: "Latest",
+    emoji: "🐍",
+    gradient: "from-blue-500/15 to-cyan-500/15 border-blue-500/25 hover:border-blue-500/50",
+    defaultName: "api"
+  },
+  {
+    id: "agent-ai",
+    label: "AI Agent",
+    description: "Claude API agent with tool use & streaming",
+    badge: "Claude Opus 4.6",
+    emoji: "🤖",
+    gradient: "from-purple-500/15 to-violet-500/15 border-purple-500/25 hover:border-purple-500/50",
+    defaultName: "agent"
+  },
+  {
+    id: "agent-orchestration",
+    label: "Agent Orchestration",
+    description: "Multi-agent system: Researcher → Writer → Reviewer",
+    badge: "Claude Opus 4.6",
+    emoji: "🧠",
+    gradient: "from-pink-500/15 to-rose-500/15 border-pink-500/25 hover:border-pink-500/50",
+    defaultName: "agents"
+  }
+];
+function CodeGeneratorModal({ projectId, onClose, onComplete }) {
+  const [step, setStep] = reactExports.useState("select");
+  const [selected, setSelected] = reactExports.useState(null);
+  const [folderName, setFolderName] = reactExports.useState("");
+  const [initShadcn, setInitShadcn] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  const [generatedPath, setGeneratedPath] = reactExports.useState("");
+  const handleSelect = (fw) => {
+    setSelected(fw);
+    setFolderName(fw.defaultName);
+    setStep("configure");
+  };
+  const handleGenerate = async () => {
+    if (!selected || !folderName.trim()) return;
+    setStep("generating");
+    setError("");
+    const result = await window.electron.codeGenerate({
+      projectId,
+      folderName: folderName.trim(),
+      framework: selected.id,
+      initShadcn
+    });
+    if (result.success) {
+      setGeneratedPath(result.path ?? "");
+      setStep("done");
+      onComplete?.(folderName.trim());
+    } else {
+      setError(result.error ?? "Generation failed");
+      setStep("error");
+    }
+  };
+  const openInFinder = () => {
+    if (generatedPath) window.electron.folderOpen(generatedPath);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: (e3) => e3.target === e3.currentTarget && onClose(), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      initial: { opacity: 0, scale: 0.95, y: 10 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.95, y: 10 },
+      transition: { duration: 0.2 },
+      className: "modal-content max-w-2xl w-full",
+      style: { maxHeight: "90vh", overflowY: "auto" },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-6 border-b border-border", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 16, className: "text-primary" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-base font-bold text-text", children: "Generate Code Folder" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "Scaffold a project with the latest setup" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: onClose,
+              className: "text-text-muted hover:text-text p-1.5 rounded-lg hover:bg-surface transition-colors",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 16 })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [
+          step === "select" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, x: 10 },
+              animate: { opacity: 1, x: 0 },
+              exit: { opacity: 0, x: -10 },
+              className: "p-6",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm mb-4", children: "Choose a framework to scaffold inside your project folder:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: FRAMEWORKS.map((fw) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  motion.button,
+                  {
+                    whileTap: { scale: 0.98 },
+                    onClick: () => handleSelect(fw),
+                    className: `bg-gradient-to-br ${fw.gradient} border rounded-xl p-4 text-left transition-all group`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl", children: fw.emoji }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted font-medium", children: fw.badge })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text font-semibold text-sm", children: fw.label }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-0.5 leading-relaxed", children: fw.description }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 mt-3 text-text-muted group-hover:text-text transition-colors", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Select" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { size: 12 })
+                      ] })
+                    ]
+                  },
+                  fw.id
+                )) })
+              ]
+            },
+            "select"
+          ),
+          step === "configure" && selected && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, x: 10 },
+              animate: { opacity: 1, x: 0 },
+              exit: { opacity: 0, x: -10 },
+              className: "p-6 space-y-5",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gradient-to-br ${selected.gradient} border rounded-xl p-4 flex items-center gap-3`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl", children: selected.emoji }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text font-semibold", children: selected.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: selected.description })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => setStep("select"),
+                      className: "ml-auto text-text-muted hover:text-text text-xs underline",
+                      children: "Change"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Folder Name" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: folderName,
+                      onChange: (e3) => setFolderName(e3.target.value.replace(/[^a-zA-Z0-9-_]/g, "-")),
+                      placeholder: "e.g. frontend, backend, web",
+                      className: "input",
+                      autoFocus: true
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs mt-1", children: [
+                    "Will be created at ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-accent font-mono", children: [
+                      "projects/",
+                      projectId,
+                      "/",
+                      folderName || "..."
+                    ] })
+                  ] })
+                ] }),
+                (selected.id === "vite" || selected.id === "nextjs") && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    onClick: () => setInitShadcn((v2) => !v2),
+                    className: `flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${initShadcn ? "border-primary/50 bg-primary/5" : "border-border bg-surface hover:border-border/80"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "div",
+                        {
+                          className: `w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${initShadcn ? "border-primary bg-primary" : "border-border"}`,
+                          children: initShadcn && /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 12, className: "text-white" })
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium", children: "Initialize shadcn/ui" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "Add beautiful, accessible components to your project" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted", children: "Optional" })
+                    ]
+                  }
+                ),
+                (selected.id === "node-backend" || selected.id === "python-backend" || selected.id === "agent-ai" || selected.id === "agent-orchestration") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-accent/5 border border-accent/20 rounded-xl p-3 text-xs text-accent", children: selected.id === "python-backend" ? "Run pip install -r requirements.txt after generation." : "Run npm install inside the folder after generation." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 pt-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setStep("select"), className: "btn-secondary flex-1 justify-center", children: "Back" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    motion.button,
+                    {
+                      whileTap: { scale: 0.98 },
+                      onClick: handleGenerate,
+                      disabled: !folderName.trim(),
+                      className: "btn-primary flex-1 justify-center",
+                      children: "Generate"
+                    }
+                  )
+                ] })
+              ]
+            },
+            "configure"
+          ),
+          step === "generating" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              exit: { opacity: 0 },
+              className: "p-12 flex flex-col items-center justify-center gap-4",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.div,
+                  {
+                    animate: { rotate: 360 },
+                    transition: { duration: 1.5, repeat: Infinity, ease: "linear" },
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(Loader2, { size: 28, className: "text-primary" })
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text font-semibold", children: [
+                    "Scaffolding ",
+                    selected?.label,
+                    "…"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm mt-1", children: "Installing latest packages. This may take a minute." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-1.5 mt-2", children: [0, 0.2, 0.4].map((delay2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.div,
+                  {
+                    animate: { opacity: [0.3, 1, 0.3] },
+                    transition: { duration: 1.2, repeat: Infinity, delay: delay2 },
+                    className: "w-2 h-2 rounded-full bg-primary"
+                  },
+                  delay2
+                )) })
+              ]
+            },
+            "generating"
+          ),
+          step === "done" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, scale: 0.95 },
+              animate: { opacity: 1, scale: 1 },
+              className: "p-10 flex flex-col items-center justify-center gap-4 text-center",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.div,
+                  {
+                    initial: { scale: 0 },
+                    animate: { scale: 1 },
+                    transition: { type: "spring", stiffness: 260, damping: 20 },
+                    className: "w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center",
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 32, className: "text-success" })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text font-bold text-lg", children: [
+                    selected?.label,
+                    " ready!"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm mt-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-accent", children: folderName }),
+                    " has been scaffolded with a FreelanceVault branded home page."
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 mt-2 w-full max-w-xs", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: openInFinder, className: "btn-secondary flex-1 justify-center text-sm py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 14 }),
+                    "Open Folder"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "btn-primary flex-1 justify-center text-sm py-2", children: "Done" })
+                ] })
+              ]
+            },
+            "done"
+          ),
+          step === "error" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              className: "p-8 flex flex-col items-center gap-4 text-center",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AlertCircle, { size: 28, className: "text-danger" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text font-semibold", children: "Generation failed" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-2 max-w-sm font-mono bg-surface rounded-lg p-3 text-left border border-border", children: error })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "btn-secondary", children: "Close" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setStep("configure"), className: "btn-primary", children: "Try Again" })
+                ] })
+              ]
+            },
+            "error"
+          )
+        ] })
+      ]
+    }
+  ) });
+}
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "CAD", "AUD", "JPY", "SGD", "AED", "CHF"];
 const STATUSES = [
   { value: "not_started", label: "Not Started" },
@@ -41044,12 +41673,31 @@ const STATUSES = [
   { value: "on_hold", label: "On Hold" },
   { value: "cancelled", label: "Cancelled" }
 ];
-function generateId$2() {
+function generateId$3() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+function extractRepoName$1(url) {
+  try {
+    const clean = url.trim().replace(/\.git$/, "");
+    const parts = clean.split("/");
+    return parts[parts.length - 1] || "";
+  } catch {
+    return "";
+  }
 }
 function CreateProjectModal({ onClose, editProject }) {
   const { addProject, updateProject, displayCurrency } = useAppStore();
   const [isLoading, setIsLoading] = reactExports.useState(false);
+  const [createdProjectId, setCreatedProjectId] = reactExports.useState(null);
+  const [showCodeGen, setShowCodeGen] = reactExports.useState(false);
+  const [mode, setMode] = reactExports.useState("manual");
+  const [projectType, setProjectType] = reactExports.useState(
+    editProject?.projectType || "freelance"
+  );
+  const [githubUrl, setGithubUrl] = reactExports.useState(editProject?.githubUrl || "");
+  const [cloneState, setCloneState] = reactExports.useState("idle");
+  const [cloneError, setCloneError] = reactExports.useState("");
+  const [clonedFolderName, setClonedFolderName] = reactExports.useState("");
   const [clientName, setClientName] = reactExports.useState(editProject?.clientName || "");
   const [projectName, setProjectName] = reactExports.useState(editProject?.projectName || "");
   const [middleman, setMiddleman] = reactExports.useState(editProject?.middleman || "");
@@ -41063,6 +41711,13 @@ function CreateProjectModal({ onClose, editProject }) {
   const [tags, setTags] = reactExports.useState(editProject?.tags || []);
   const [tagInput, setTagInput] = reactExports.useState("");
   const [errors, setErrors] = reactExports.useState({});
+  const isPersonal = projectType === "personal";
+  reactExports.useEffect(() => {
+    if (mode === "github" && githubUrl) {
+      const name = extractRepoName$1(githubUrl);
+      if (name) setProjectName(name);
+    }
+  }, [githubUrl, mode]);
   const addTag = () => {
     const t2 = tagInput.trim();
     if (t2 && !tags.includes(t2)) setTags([...tags, t2]);
@@ -41076,9 +41731,10 @@ function CreateProjectModal({ onClose, editProject }) {
   };
   const validate = () => {
     const e3 = {};
-    if (!clientName.trim()) e3.clientName = "Client name is required";
+    if (!isPersonal && !clientName.trim()) e3.clientName = "Client name is required";
     if (!projectName.trim()) e3.projectName = "Project name is required";
-    if (!projectCost || isNaN(Number(projectCost)) || Number(projectCost) < 0) {
+    if (mode === "github" && !githubUrl.trim()) e3.githubUrl = "GitHub URL is required";
+    if (!isPersonal && (!projectCost || isNaN(Number(projectCost)) || Number(projectCost) < 0)) {
       e3.projectCost = "Enter a valid project cost";
     }
     setErrors(e3);
@@ -41091,26 +41747,11 @@ function CreateProjectModal({ onClose, editProject }) {
     try {
       if (editProject) {
         await updateProject(editProject.id, {
-          clientName: clientName.trim(),
+          projectType,
+          clientName: isPersonal ? "Personal" : clientName.trim(),
           projectName: projectName.trim(),
-          middleman: middleman.trim() || void 0,
-          projectCost: Number(projectCost),
-          currency,
-          status,
-          description: description.trim() || void 0,
-          startDate: startDate || void 0,
-          endDate: endDate || void 0,
-          deadline: deadline || void 0,
-          tags
-        });
-      } else {
-        const now2 = (/* @__PURE__ */ new Date()).toISOString();
-        const project = {
-          id: generateId$2(),
-          clientName: clientName.trim(),
-          projectName: projectName.trim(),
-          middleman: middleman.trim() || void 0,
-          projectCost: Number(projectCost),
+          middleman: isPersonal ? void 0 : middleman.trim() || void 0,
+          projectCost: isPersonal ? 0 : Number(projectCost),
           currency,
           status,
           description: description.trim() || void 0,
@@ -41118,17 +41759,226 @@ function CreateProjectModal({ onClose, editProject }) {
           endDate: endDate || void 0,
           deadline: deadline || void 0,
           tags,
+          githubUrl: githubUrl.trim() || void 0
+        });
+        onClose();
+      } else {
+        const now2 = (/* @__PURE__ */ new Date()).toISOString();
+        const id2 = generateId$3();
+        const project = {
+          id: id2,
+          projectType,
+          clientName: isPersonal ? "Personal" : clientName.trim(),
+          projectName: projectName.trim(),
+          middleman: isPersonal ? void 0 : middleman.trim() || void 0,
+          projectCost: isPersonal ? 0 : Number(projectCost),
+          currency,
+          status,
+          description: description.trim() || void 0,
+          startDate: startDate || void 0,
+          endDate: endDate || void 0,
+          deadline: deadline || void 0,
+          tags,
+          githubUrl: mode === "github" ? githubUrl.trim() : void 0,
           createdAt: now2,
           updatedAt: now2
         };
         await addProject(project);
+        setCreatedProjectId(id2);
+        if (mode === "github") {
+          const folderName = extractRepoName$1(githubUrl) || "repo";
+          setClonedFolderName(folderName);
+          setCloneState("cloning");
+          const result = await window.electron.gitClone({ projectId: id2, url: githubUrl.trim(), folderName });
+          if (result.success) {
+            setCloneState("done");
+          } else {
+            setCloneError(result.error || "Clone failed");
+            setCloneState("error");
+          }
+        }
       }
-      onClose();
     } catch (err) {
       setErrors({ root: String(err) });
     }
     setIsLoading(false);
   };
+  if (createdProjectId && mode === "github" && cloneState !== "idle") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      motion.div,
+      {
+        initial: { opacity: 0, scale: 0.95, y: 10 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        transition: { duration: 0.2 },
+        className: "modal-content",
+        style: { maxWidth: 460 },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [
+          cloneState === "cloning" && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                animate: { rotate: 360 },
+                transition: { duration: 1.2, repeat: Infinity, ease: "linear" },
+                className: "w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 30, className: "text-primary" })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-text mb-2", children: "Cloning Repository" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm mb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs bg-surface border border-border rounded px-2 py-0.5 break-all", children: githubUrl }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-3", children: "This may take a moment for large repos..." })
+          ] }, "cloning"),
+          cloneState === "done" && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 }, transition: { type: "spring", stiffness: 260, damping: 20 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 30, className: "text-success" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-text mb-1", children: "Repository Cloned!" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm mb-1", children: [
+              "Saved to ",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-xs bg-surface border border-border rounded px-1.5 py-0.5", children: [
+                clonedFolderName,
+                "/"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mb-7", children: "Project created and code is ready." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                motion.button,
+                {
+                  whileTap: { scale: 0.98 },
+                  onClick: async () => {
+                    await window.electron.openInVscode(createdProjectId);
+                    onClose();
+                  },
+                  className: "w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#007ACC] text-white font-semibold text-sm hover:opacity-90 transition-opacity",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ExternalLink, { size: 15 }),
+                    "Open in VS Code"
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                motion.button,
+                {
+                  whileTap: { scale: 0.98 },
+                  onClick: async () => {
+                    await window.electron.openInAntigravity(createdProjectId);
+                    onClose();
+                  },
+                  className: "w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ExternalLink, { size: 15 }),
+                    "Open in Antigravity"
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: onClose,
+                  className: "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-text-muted hover:text-text hover:bg-surface transition-colors text-sm",
+                  children: "Close"
+                }
+              )
+            ] })
+          ] }, "done"),
+          cloneState === "error" && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0 }, animate: { opacity: 1 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AlertCircle, { size: 30, className: "text-danger" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-text mb-2", children: "Clone Failed" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm mb-3", children: "Project was created but the repository could not be cloned." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-danger/5 border border-danger/20 rounded-xl p-3 mb-6 text-left", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs font-mono break-all", children: cloneError }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                motion.button,
+                {
+                  whileTap: { scale: 0.98 },
+                  onClick: async () => {
+                    setCloneState("cloning");
+                    setCloneError("");
+                    const result = await window.electron.gitClone({ projectId: createdProjectId, url: githubUrl.trim(), folderName: clonedFolderName });
+                    if (result.success) setCloneState("done");
+                    else {
+                      setCloneError(result.error || "Clone failed");
+                      setCloneState("error");
+                    }
+                  },
+                  className: "w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:opacity-90 transition-opacity",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 15 }),
+                    "Retry Clone"
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-full py-2.5 rounded-xl text-text-muted hover:text-text hover:bg-surface transition-colors text-sm", children: "Close" })
+            ] })
+          ] }, "error")
+        ] }) })
+      }
+    ) });
+  }
+  if (showCodeGen && createdProjectId) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CodeGeneratorModal,
+      {
+        projectId: createdProjectId,
+        onClose,
+        onComplete: onClose
+      }
+    );
+  }
+  if (createdProjectId && mode === "manual" && !showCodeGen) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      motion.div,
+      {
+        initial: { opacity: 0, scale: 0.95, y: 10 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.95, y: 10 },
+        transition: { duration: 0.2 },
+        className: "modal-content",
+        style: { maxWidth: 460 },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.div,
+            {
+              initial: { scale: 0 },
+              animate: { scale: 1 },
+              transition: { type: "spring", stiffness: 260, damping: 20, delay: 0.05 },
+              className: "w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "32", height: "32", viewBox: "0 0 24 24", fill: "none", stroke: "#10b981", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: "20 6 9 17 4 12" }) })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-text mb-1", children: "Project Created!" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm mb-8", children: [
+            "Would you like to generate a code folder for this project?",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs opacity-70", children: "Vite, Next.js, Node backend, Python, AI agents and more." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              motion.button,
+              {
+                whileTap: { scale: 0.98 },
+                onClick: () => setShowCodeGen(true),
+                className: "w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 16 }),
+                  "Generate Code Folder"
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: onClose,
+                className: "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-text-muted hover:text-text hover:bg-surface transition-colors text-sm",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SkipForward, { size: 14 }),
+                  "Skip for now"
+                ]
+              }
+            )
+          ] })
+        ] })
+      }
+    ) });
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: (e3) => e3.target === e3.currentTarget && onClose(), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     motion.div,
     {
@@ -41136,9 +41986,10 @@ function CreateProjectModal({ onClose, editProject }) {
       animate: { opacity: 1, scale: 1, y: 0 },
       exit: { opacity: 0, scale: 0.95, y: 10 },
       transition: { duration: 0.2 },
-      className: "modal-content",
+      className: "modal-content flex flex-col",
+      style: { maxHeight: "calc(100vh - 48px)" },
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-6 border-b border-border", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-6 py-4 border-b border-border shrink-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-text", children: editProject ? "Edit Project" : "New Project" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -41149,184 +42000,234 @@ function CreateProjectModal({ onClose, editProject }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "p-6 space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Client Name *" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: clientName,
-                  onChange: (e3) => setClientName(e3.target.value),
-                  placeholder: "Acme Corp",
-                  className: "input"
-                }
-              ),
-              errors.clientName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.clientName })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Project Name *" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: projectName,
-                  onChange: (e3) => setProjectName(e3.target.value),
-                  placeholder: "Website Redesign",
-                  className: "input"
-                }
-              ),
-              errors.projectName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.projectName })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Middleman / Agency (Optional)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 pt-4 pb-0 shrink-0 flex items-center gap-3 flex-wrap", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-1 p-1 bg-surface rounded-xl border border-border", children: ["freelance", "personal"].map((t2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setProjectType(t2),
+              className: `px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${projectType === t2 ? "bg-white text-text shadow-sm border border-border" : "text-text-muted hover:text-text"}`,
+              children: t2 === "freelance" ? "Freelance" : "Personal"
+            },
+            t2
+          )) }),
+          !editProject && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-1 p-1 bg-surface rounded-xl border border-border", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
+              "button",
               {
-                type: "text",
-                value: middleman,
-                onChange: (e3) => setMiddleman(e3.target.value),
-                placeholder: "Upwork, Toptal, etc.",
-                className: "input"
+                type: "button",
+                onClick: () => setMode("manual"),
+                className: `px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${mode === "manual" ? "bg-white text-text shadow-sm border border-border" : "text-text-muted hover:text-text"}`,
+                children: "Manual"
               }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Project Cost *" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  value: projectCost,
-                  onChange: (e3) => setProjectCost(e3.target.value),
-                  placeholder: "5000",
-                  min: "0",
-                  step: "0.01",
-                  className: "input"
-                }
-              ),
-              errors.projectCost && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.projectCost })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Currency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: currency, onChange: (e3) => setCurrency(e3.target.value), className: "input", children: CURRENCIES.map((c2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c2, children: c2 }, c2)) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Status" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
               {
-                value: status,
-                onChange: (e3) => setStatus(e3.target.value),
-                className: "input",
-                children: STATUSES.map((s2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: s2.value, children: s2.label }, s2.value))
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Description" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
-              {
-                value: description,
-                onChange: (e3) => setDescription(e3.target.value),
-                placeholder: "Brief project description...",
-                rows: 3,
-                className: "input resize-none"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Start Date" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "date",
-                  value: startDate,
-                  onChange: (e3) => setStartDate(e3.target.value),
-                  className: "input"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "End Date" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "date",
-                  value: endDate,
-                  onChange: (e3) => setEndDate(e3.target.value),
-                  className: "input"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Deadline" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "date",
-                  value: deadline,
-                  onChange: (e3) => setDeadline(e3.target.value),
-                  className: "input"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Tags" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: tagInput,
-                  onChange: (e3) => setTagInput(e3.target.value),
-                  onKeyDown: handleTagKeyDown,
-                  placeholder: "Add tag and press Enter",
-                  className: "input flex-1"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: addTag,
-                  className: "btn-secondary px-3 py-2 shrink-0",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 16 })
-                }
-              )
-            ] }),
-            tags.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: tags.map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "span",
-              {
-                className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs",
+                type: "button",
+                onClick: () => setMode("github"),
+                className: `flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${mode === "github" ? "bg-white text-text shadow-sm border border-border" : "text-text-muted hover:text-text"}`,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 10 }),
-                  tag,
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setTags(tags.filter((t2) => t2 !== tag)),
-                      className: "hover:text-danger ml-0.5",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 10 })
-                    }
-                  )
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 13 }),
+                  "GitHub"
                 ]
-              },
-              tag
-            )) })
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "flex flex-col flex-1 min-h-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-y-auto flex-1 px-6 py-4 space-y-4", children: [
+            mode === "github" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "GitHub Repository URL *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 15, className: "absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "url",
+                    value: githubUrl,
+                    onChange: (e3) => setGithubUrl(e3.target.value),
+                    placeholder: "https://github.com/username/repo",
+                    className: "input pl-9",
+                    autoFocus: true
+                  }
+                )
+              ] }),
+              errors.githubUrl && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.githubUrl })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: isPersonal ? "" : "grid grid-cols-2 gap-4", children: [
+              !isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Client Name *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: clientName,
+                    onChange: (e3) => setClientName(e3.target.value),
+                    placeholder: "Acme Corp",
+                    className: "input"
+                  }
+                ),
+                errors.clientName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.clientName })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Project Name *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: projectName,
+                    onChange: (e3) => setProjectName(e3.target.value),
+                    placeholder: mode === "github" ? "Auto-filled from URL" : isPersonal ? "My Side Project" : "Website Redesign",
+                    className: "input"
+                  }
+                ),
+                errors.projectName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.projectName })
+              ] })
+            ] }),
+            !isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Middleman / Agency (Optional)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: middleman,
+                  onChange: (e3) => setMiddleman(e3.target.value),
+                  placeholder: "Upwork, Toptal, etc.",
+                  className: "input"
+                }
+              )
+            ] }),
+            !isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Project Cost *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    value: projectCost,
+                    onChange: (e3) => setProjectCost(e3.target.value),
+                    placeholder: "5000",
+                    min: "0",
+                    step: "0.01",
+                    className: "input"
+                  }
+                ),
+                errors.projectCost && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.projectCost })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Currency" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: currency, onChange: (e3) => setCurrency(e3.target.value), className: "input", children: CURRENCIES.map((c2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c2, children: c2 }, c2)) })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: status,
+                  onChange: (e3) => setStatus(e3.target.value),
+                  className: "input",
+                  children: STATUSES.map((s2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: s2.value, children: s2.label }, s2.value))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Description" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "textarea",
+                {
+                  value: description,
+                  onChange: (e3) => setDescription(e3.target.value),
+                  placeholder: "Brief project description...",
+                  rows: 3,
+                  className: "input resize-none"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Start Date" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: startDate,
+                    onChange: (e3) => setStartDate(e3.target.value),
+                    className: "input"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "End Date" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: endDate,
+                    onChange: (e3) => setEndDate(e3.target.value),
+                    className: "input"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Deadline" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: deadline,
+                    onChange: (e3) => setDeadline(e3.target.value),
+                    className: "input"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Tags" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: tagInput,
+                    onChange: (e3) => setTagInput(e3.target.value),
+                    onKeyDown: handleTagKeyDown,
+                    placeholder: "Add tag and press Enter",
+                    className: "input flex-1"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addTag, className: "btn-secondary px-3 py-2 shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 16 }) })
+              ] }),
+              tags.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: tags.map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "span",
+                {
+                  className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 10 }),
+                    tag,
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setTags(tags.filter((t2) => t2 !== tag)),
+                        className: "hover:text-danger ml-0.5",
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 10 })
+                      }
+                    )
+                  ]
+                },
+                tag
+              )) })
+            ] }),
+            errors.root && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-danger/10 border border-danger/20 rounded-lg px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-sm", children: errors.root }) })
           ] }),
-          errors.root && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-danger/10 border border-danger/20 rounded-lg px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-sm", children: errors.root }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 pt-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 px-6 py-4 border-t border-border shrink-0 bg-white rounded-b-2xl", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, className: "btn-secondary flex-1 justify-center", children: "Cancel" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", disabled: isLoading, className: "btn-primary flex-1 justify-center", children: isLoading ? "Saving..." : editProject ? "Save Changes" : "Create Project" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", disabled: isLoading, className: "btn-primary flex-1 justify-center", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Loader2, { size: 14, className: "animate-spin" }),
+              mode === "github" ? "Creating..." : "Saving..."
+            ] }) : editProject ? "Save Changes" : mode === "github" ? "Create & Clone" : "Create Project" })
           ] })
         ] })
       ]
@@ -41354,7 +42255,7 @@ function formatCurrency$2(amount, currency = "USD") {
     return `${currency} ${amount.toLocaleString()}`;
   }
 }
-function ProjectCard({ project, paidAmount, onClick, displayCurrency }) {
+function FreelanceCard({ project, paidAmount, onClick, displayCurrency }) {
   const pct = project.projectCost > 0 ? Math.min(100, paidAmount / project.projectCost * 100) : 0;
   const isOverdue = project.deadline && isPast(parseISO(project.deadline)) && project.status !== "completed" && project.status !== "cancelled";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -41400,17 +42301,50 @@ function ProjectCard({ project, paidAmount, onClick, displayCurrency }) {
           ) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 flex-wrap", children: project.tags.slice(0, 3).map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "span",
-            {
-              className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 9 }),
-                tag
-              ]
-            },
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 flex-wrap", children: project.tags.slice(0, 3).map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 9 }),
             tag
-          )) }),
+          ] }, tag)) }),
+          project.deadline && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center gap-1 text-xs ${isOverdue ? "text-danger" : "text-text-muted"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Calendar, { size: 11 }),
+            format(parseISO(project.deadline), "MMM d"),
+            isOverdue && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium", children: "· Overdue" })
+          ] })
+        ] })
+      ]
+    }
+  );
+}
+function PersonalCard({ project, onClick }) {
+  const isOverdue = project.deadline && isPast(parseISO(project.deadline)) && project.status !== "completed" && project.status !== "cancelled";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.button,
+    {
+      layout: true,
+      initial: { opacity: 0, y: 8 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: -8 },
+      whileHover: { y: -2 },
+      whileTap: { scale: 0.99 },
+      onClick,
+      className: "card text-left w-full hover:border-accent/30 transition-all duration-200 group",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-1.5 mb-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "badge bg-accent/10 text-accent border border-accent/20 text-[10px]", children: "Personal" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-text truncate group-hover:text-accent transition-colors", children: project.projectName }),
+            project.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-0.5 truncate", children: project.description })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 ml-2 shrink-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `badge border ${statusColors$1[project.status] || ""}`, children: statusLabels$1[project.status] || project.status }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { size: 14, className: "text-text-muted group-hover:text-accent transition-colors" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 flex-wrap", children: project.tags.slice(0, 3).map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-text-muted text-xs border border-border", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 9 }),
+            tag
+          ] }, tag)) }),
           project.deadline && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center gap-1 text-xs ${isOverdue ? "text-danger" : "text-text-muted"}`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Calendar, { size: 11 }),
             format(parseISO(project.deadline), "MMM d"),
@@ -41427,6 +42361,7 @@ function ProjectList() {
   const [showCreate, setShowCreate] = reactExports.useState(false);
   const [search, setSearch] = reactExports.useState("");
   const [filterStatus, setFilterStatus] = reactExports.useState("all");
+  const [tab, setTab] = reactExports.useState("all");
   const paidByProject = reactExports.useMemo(() => {
     const map2 = {};
     payments.forEach((p2) => {
@@ -41436,21 +42371,27 @@ function ProjectList() {
   }, [payments]);
   const filtered = reactExports.useMemo(() => {
     return projects.filter((p2) => {
+      const type = p2.projectType || "freelance";
+      const matchTab = tab === "all" || type === tab;
       const matchSearch = !search || p2.projectName.toLowerCase().includes(search.toLowerCase()) || p2.clientName.toLowerCase().includes(search.toLowerCase()) || p2.tags.some((t2) => t2.toLowerCase().includes(search.toLowerCase()));
       const matchStatus = filterStatus === "all" || p2.status === filterStatus;
-      return matchSearch && matchStatus;
+      return matchTab && matchSearch && matchStatus;
     });
-  }, [projects, search, filterStatus]);
+  }, [projects, search, filterStatus, tab]);
+  const freelanceProjects = filtered.filter((p2) => (p2.projectType || "freelance") === "freelance");
+  const personalProjects = filtered.filter((p2) => p2.projectType === "personal");
   const statuses = ["all", "not_started", "in_progress", "completed", "on_hold", "cancelled"];
+  const totalFreelance = projects.filter((p2) => (p2.projectType || "freelance") === "freelance").length;
+  const totalPersonal = projects.filter((p2) => p2.projectType === "personal").length;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-text", children: "Projects" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm mt-0.5", children: [
-          projects.length,
-          " project",
-          projects.length !== 1 ? "s" : "",
-          " total"
+          totalFreelance,
+          " freelance · ",
+          totalPersonal,
+          " personal"
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -41467,7 +42408,23 @@ function ProjectList() {
       )
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6 flex-wrap", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 min-w-[200px] max-w-xs", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-1 p-1 bg-surface border border-border rounded-xl", children: [
+        { key: "all", label: "All", icon: FolderOpen },
+        { key: "freelance", label: "Freelance", icon: Briefcase },
+        { key: "personal", label: "Personal", icon: User }
+      ].map(({ key, label, icon: Icon }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: () => setTab(key),
+          className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${tab === key ? "bg-primary text-white shadow-sm" : "text-text-muted hover:text-text"}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { size: 12 }),
+            label
+          ]
+        },
+        key
+      )) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 min-w-[180px] max-w-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 14, className: "absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
@@ -41498,18 +42455,142 @@ function ProjectList() {
         /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 16 }),
         "Create Project"
       ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { layout: true, className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: filtered.map((project) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      ProjectCard,
-      {
-        project,
-        paidAmount: paidByProject[project.id] || 0,
-        onClick: () => setView("project-detail", project.id),
-        displayCurrency
-      },
-      project.id
-    )) }) }),
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-8", children: [
+      (tab === "all" || tab === "freelance") && freelanceProjects.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        tab === "all" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Briefcase, { size: 14, className: "text-primary" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-semibold text-text", children: "Freelance" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-text-muted text-xs", children: [
+            "(",
+            freelanceProjects.length,
+            ")"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { layout: true, className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: freelanceProjects.map((project) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          FreelanceCard,
+          {
+            project,
+            paidAmount: paidByProject[project.id] || 0,
+            onClick: () => setView("project-detail", project.id),
+            displayCurrency
+          },
+          project.id
+        )) }) })
+      ] }),
+      (tab === "all" || tab === "personal") && personalProjects.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        tab === "all" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 14, className: "text-accent" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-semibold text-text", children: "Personal" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-text-muted text-xs", children: [
+            "(",
+            personalProjects.length,
+            ")"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { layout: true, className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: personalProjects.map((project) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PersonalCard,
+          {
+            project,
+            onClick: () => setView("project-detail", project.id)
+          },
+          project.id
+        )) }) })
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: showCreate && /* @__PURE__ */ jsxRuntimeExports.jsx(CreateProjectModal, { onClose: () => setShowCreate(false) }) })
   ] });
+}
+function ConfirmDeleteModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  itemType,
+  itemName,
+  description,
+  requireTypedConfirm = false
+}) {
+  const [typed, setTyped] = reactExports.useState("");
+  const [confirming, setConfirming] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isOpen) setTyped("");
+  }, [isOpen]);
+  const canDelete = !requireTypedConfirm || typed === itemName;
+  const handleConfirm = async () => {
+    if (!canDelete || confirming) return;
+    setConfirming(true);
+    await onConfirm();
+    setConfirming(false);
+    onClose();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: isOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      initial: { opacity: 0, scale: 0.95 },
+      animate: { opacity: 1, scale: 1 },
+      exit: { opacity: 0, scale: 0.95 },
+      transition: { duration: 0.15 },
+      className: "bg-card border border-border rounded-2xl p-6 max-w-sm w-full",
+      onClick: (e3) => e3.stopPropagation(),
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 20, className: "text-danger" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-text text-center mb-2", children: [
+          "Delete ",
+          itemType,
+          "?"
+        ] }),
+        description ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm text-center mb-4", children: description }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm text-center mb-4", children: [
+          "This will permanently delete",
+          " ",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-text", children: [
+            "“",
+            itemName,
+            "”"
+          ] }),
+          ". This action cannot be undone."
+        ] }),
+        requireTypedConfirm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs mb-2 text-center", children: [
+            "Type",
+            " ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-semibold text-text bg-surface px-1.5 py-0.5 rounded border border-border", children: itemName }),
+            " ",
+            "to confirm"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              autoFocus: true,
+              className: "input w-full text-sm",
+              placeholder: `Type "${itemName}" to confirm`,
+              value: typed,
+              onChange: (e3) => setTyped(e3.target.value),
+              onKeyDown: (e3) => e3.key === "Enter" && handleConfirm()
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: onClose,
+              disabled: confirming,
+              className: "btn-secondary flex-1 justify-center",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleConfirm,
+              disabled: !canDelete || confirming,
+              className: "btn-danger flex-1 justify-center disabled:opacity-40 disabled:cursor-not-allowed",
+              children: confirming ? "Deleting…" : `Delete ${itemType}`
+            }
+          )
+        ] })
+      ]
+    }
+  ) }) });
 }
 const typeColors$1 = {
   advance: "bg-accent text-white",
@@ -41536,7 +42617,7 @@ function formatCurrency$1(amount, currency = "USD") {
     return `${currency} ${amount.toLocaleString()}`;
   }
 }
-function generateId$1() {
+function generateId$2() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 function AddPaymentModal({ projectId, currency, onClose }) {
@@ -41556,7 +42637,7 @@ function AddPaymentModal({ projectId, currency, onClose }) {
     setIsLoading(true);
     const now2 = (/* @__PURE__ */ new Date()).toISOString();
     await addPayment({
-      id: generateId$1(),
+      id: generateId$2(),
       projectId,
       amount: Number(amount),
       date: date2,
@@ -41662,6 +42743,7 @@ function PaymentTimeline({ project }) {
   const { db: db2, deletePayment, displayCurrency } = useAppStore();
   const [showAdd, setShowAdd] = reactExports.useState(false);
   const [deletingId, setDeletingId] = reactExports.useState(null);
+  const [pendingDelete, setPendingDelete] = reactExports.useState(null);
   const payments = reactExports.useMemo(
     () => db2.payments.filter((p2) => p2.projectId === project.id).sort((a2, b2) => new Date(b2.date).getTime() - new Date(a2.date).getTime()),
     [db2.payments, project.id]
@@ -41669,9 +42751,10 @@ function PaymentTimeline({ project }) {
   const totalPaid = reactExports.useMemo(() => payments.reduce((sum, p2) => sum + p2.amount, 0), [payments]);
   const remaining = Math.max(0, project.projectCost - totalPaid);
   const pct = project.projectCost > 0 ? Math.min(100, totalPaid / project.projectCost * 100) : 0;
-  const handleDelete = async (id2) => {
-    setDeletingId(id2);
-    await deletePayment(id2);
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeletingId(pendingDelete.id);
+    await deletePayment(pendingDelete.id);
     setDeletingId(null);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl", children: [
@@ -41704,7 +42787,7 @@ function PaymentTimeline({ project }) {
           animate: { width: `${pct}%` },
           transition: { duration: 0.8, ease: "easeOut" },
           className: "h-3 rounded-full",
-          style: { background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)" }
+          style: { background: "linear-gradient(90deg, #3D6EF5 0%, #10C9A0 100%)" }
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs text-text-muted mt-1.5", children: [
@@ -41770,7 +42853,7 @@ function PaymentTimeline({ project }) {
                 motion.button,
                 {
                   whileTap: { scale: 0.9 },
-                  onClick: () => handleDelete(payment.id),
+                  onClick: () => setPendingDelete(payment),
                   disabled: deletingId === payment.id,
                   className: "opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger transition-all p-1 rounded-lg hover:bg-danger/10 shrink-0",
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 14 })
@@ -41789,7 +42872,18 @@ function PaymentTimeline({ project }) {
         currency: displayCurrency,
         onClose: () => setShowAdd(false)
       }
-    ) })
+    ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ConfirmDeleteModal,
+      {
+        isOpen: pendingDelete !== null,
+        onClose: () => setPendingDelete(null),
+        onConfirm: handleDelete,
+        itemType: "payment",
+        itemName: pendingDelete ? `${typeLabels$1[pendingDelete.type]} — ${formatCurrency$1(pendingDelete.amount, displayCurrency)}` : "",
+        description: pendingDelete ? `Delete the ${typeLabels$1[pendingDelete.type].toLowerCase()} payment of ${formatCurrency$1(pendingDelete.amount, displayCurrency)} on ${format(parseISO(pendingDelete.date), "MMM d, yyyy")}? This cannot be undone.` : void 0
+      }
+    )
   ] });
 }
 const PIN_LENGTH = 4;
@@ -41814,7 +42908,7 @@ const typeColors = {
   ssh_key: "text-warning bg-warning/10",
   other: "text-text-muted bg-surface"
 };
-function generateId() {
+function generateId$1() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 function UnlockVault({ onUnlock, onCancel }) {
@@ -41904,9 +42998,9 @@ function UnlockVault({ onUnlock, onCancel }) {
             children: Array.from({ length: PIN_LENGTH }).map((_, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               motion.div,
               {
-                animate: { backgroundColor: i < pin.length ? error ? "#ef4444" : "#7c3aed" : "rgba(37,37,56,1)" },
+                animate: { backgroundColor: i < pin.length ? error ? "#ef4444" : "#3D6EF5" : "#E5E7EB" },
                 className: "w-3 h-3 rounded-full border-2",
-                style: { borderColor: i < pin.length ? error ? "#ef4444" : "#7c3aed" : "#252538" }
+                style: { borderColor: i < pin.length ? error ? "#ef4444" : "#3D6EF5" : "#D1D5DB" }
               },
               i
             ))
@@ -41943,10 +43037,10 @@ function UnlockVault({ onUnlock, onCancel }) {
               numRows.map((row, ri2) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: row.map((d2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 motion.button,
                 {
-                  whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+                  whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
                   onClick: () => pressKey(d2),
                   className: "w-14 h-11 rounded-xl text-base font-semibold text-text flex items-center justify-center select-none",
-                  style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+                  style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
                   children: d2
                 },
                 d2
@@ -41956,10 +43050,10 @@ function UnlockVault({ onUnlock, onCancel }) {
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   motion.button,
                   {
-                    whileTap: { scale: 0.88, backgroundColor: "rgba(124,58,237,0.2)" },
+                    whileTap: { scale: 0.88, backgroundColor: "rgba(61,110,245,0.12)" },
                     onClick: () => pressKey("0"),
                     className: "w-14 h-11 rounded-xl text-base font-semibold text-text flex items-center justify-center",
-                    style: { background: "rgba(26,26,39,0.9)", border: "1px solid rgba(37,37,56,0.8)" },
+                    style: { background: "#F9FAFB", border: "1px solid #E5E7EB" },
                     children: "0"
                   }
                 ),
@@ -41970,7 +43064,7 @@ function UnlockVault({ onUnlock, onCancel }) {
                     onClick: deleteKey,
                     disabled: pin.length === 0,
                     className: "w-14 h-11 rounded-xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20",
-                    style: { background: "rgba(37,37,56,0.3)" },
+                    style: { background: "#F3F4F6", border: "1px solid #E5E7EB" },
                     children: /* @__PURE__ */ jsxRuntimeExports.jsx(Delete, { size: 15 })
                   }
                 )
@@ -42018,7 +43112,7 @@ function AddCredentialModal({ projectId, onClose }) {
     if (!validate()) return;
     setIsLoading(true);
     await addCredential({
-      id: generateId(),
+      id: generateId$1(),
       projectId,
       label: label.trim(),
       type,
@@ -42182,6 +43276,7 @@ function CredentialVault({ projectId }) {
   const [vaultUnlocked, setVaultUnlocked] = reactExports.useState(false);
   const [showUnlock, setShowUnlock] = reactExports.useState(false);
   const [lockTimer, setLockTimer] = reactExports.useState(null);
+  const [pendingDelete, setPendingDelete] = reactExports.useState(null);
   const credentials = reactExports.useMemo(
     () => db2.credentials.filter((c2) => c2.projectId === projectId),
     [db2.credentials, projectId]
@@ -42246,14 +43341,27 @@ function CredentialVault({ projectId }) {
         cred,
         vaultUnlocked,
         onRevealRequest: () => setShowUnlock(true),
-        onDelete: () => deleteCredential(cred.id)
+        onDelete: () => setPendingDelete(cred)
       },
       cred.id
     )) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { children: [
       showAdd && /* @__PURE__ */ jsxRuntimeExports.jsx(AddCredentialModal, { projectId, onClose: () => setShowAdd(false) }),
       showUnlock && /* @__PURE__ */ jsxRuntimeExports.jsx(UnlockVault, { onUnlock: unlock, onCancel: () => setShowUnlock(false) })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ConfirmDeleteModal,
+      {
+        isOpen: pendingDelete !== null,
+        onClose: () => setPendingDelete(null),
+        onConfirm: async () => {
+          if (pendingDelete) await deleteCredential(pendingDelete.id);
+        },
+        itemType: "credential",
+        itemName: pendingDelete?.label ?? "",
+        requireTypedConfirm: true
+      }
+    )
   ] });
 }
 function getFileIcon(name) {
@@ -42265,13 +43373,21 @@ function getFileIcon(name) {
   return File;
 }
 function formatSize(bytes) {
+  if (bytes == null || isNaN(bytes) || bytes < 0) return "—";
+  if (bytes === 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+function extractRepoName(url) {
+  return url.trim().replace(/\.git$/, "").split("/").pop() || "";
 }
 function FileRow({ file, onOpen, onDelete }) {
   const Icon = getFileIcon(file.name);
   const ext = file.name.split(".").pop()?.toUpperCase() || "FILE";
+  const isNested = file.relativePath.includes("/");
+  const folder = isNested ? file.relativePath.split("/").slice(0, -1).join("/") : null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     motion.div,
     {
@@ -42284,7 +43400,11 @@ function FileRow({ file, onOpen, onDelete }) {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { size: 16, className: "text-text-muted" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium truncate", children: file.name }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-0.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-0.5 flex-wrap", children: [
+            folder && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-text-muted text-[10px] font-mono bg-surface px-1.5 py-0.5 rounded border border-border", children: [
+              folder,
+              "/"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-text-muted text-xs", children: formatSize(file.size) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-border", children: "·" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-text-muted text-xs", children: format(parseISO(file.modifiedAt), "MMM d, yyyy") }),
@@ -42321,6 +43441,8 @@ function FileSection({ title, category, projectId, description }) {
   const [files, setFiles] = reactExports.useState([]);
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [isUploading, setIsUploading] = reactExports.useState(false);
+  const [uploadingFolder, setUploadingFolder] = reactExports.useState(false);
+  const [pendingDelete, setPendingDelete] = reactExports.useState(null);
   const loadFiles = reactExports.useCallback(async () => {
     setIsLoading(true);
     const result = await window.electron.filesList({ projectId, category });
@@ -42330,21 +43452,27 @@ function FileSection({ title, category, projectId, description }) {
   reactExports.useEffect(() => {
     loadFiles();
   }, [loadFiles]);
-  const handleUpload = async () => {
+  const handleUploadFiles = async () => {
     setIsUploading(true);
     const result = await window.electron.filesUpload({ projectId, category });
     setIsUploading(false);
-    if (result.success && result.files.length > 0) {
-      await loadFiles();
-    }
+    if (result.success && result.files.length > 0) await loadFiles();
+  };
+  const handleUploadFolder = async () => {
+    setUploadingFolder(true);
+    const result = await window.electron.filesUploadFolder({ projectId, category });
+    setUploadingFolder(false);
+    if (result.success && result.files.length > 0) await loadFiles();
   };
   const handleOpen = (file) => {
     window.electron.filesOpen(file.path);
   };
-  const handleDelete = async (file) => {
-    await window.electron.filesDelete({ projectId, category, fileName: file.name });
-    setFiles((prev) => prev.filter((f2) => f2.name !== file.name));
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    await window.electron.filesDelete({ projectId, category, relativePath: pendingDelete.relativePath });
+    setFiles((prev) => prev.filter((f2) => f2.relativePath !== pendingDelete.relativePath));
   };
+  const isSpinning = isLoading || isUploading || uploadingFolder;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -42357,18 +43485,46 @@ function FileSection({ title, category, projectId, description }) {
           {
             whileTap: { scale: 0.97 },
             onClick: loadFiles,
-            disabled: isLoading,
+            disabled: isSpinning,
             className: "p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all",
             title: "Refresh",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { animate: isLoading ? { rotate: 360 } : { rotate: 0 }, transition: isLoading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}, children: /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 14 }) })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                animate: isLoading ? { rotate: 360 } : { rotate: 0 },
+                transition: isLoading ? { duration: 1, repeat: Infinity, ease: "linear" } : {},
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 14 })
+              }
+            )
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           motion.button,
           {
             whileTap: { scale: 0.97 },
-            onClick: handleUpload,
-            disabled: isUploading,
+            onClick: handleUploadFolder,
+            disabled: isSpinning,
+            title: "Upload folder",
+            className: "btn-secondary text-sm py-1.5 px-3",
+            children: [
+              uploadingFolder ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                motion.div,
+                {
+                  animate: { rotate: 360 },
+                  transition: { duration: 1, repeat: Infinity, ease: "linear" },
+                  className: "w-4 h-4 rounded-full border-2 border-text-muted border-t-transparent"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx(FolderInput, { size: 14 }),
+              "Folder"
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          motion.button,
+          {
+            whileTap: { scale: 0.97 },
+            onClick: handleUploadFiles,
+            disabled: isSpinning,
             className: "btn-primary text-sm py-1.5",
             children: [
               isUploading ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -42379,53 +43535,400 @@ function FileSection({ title, category, projectId, description }) {
                   className: "w-4 h-4 rounded-full border-2 border-white border-t-transparent"
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx(Upload, { size: 14 }),
-              "Upload"
+              "Files"
             ]
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-card border border-border rounded-xl overflow-hidden", children: files.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "flex flex-col items-center justify-center py-10 text-text-muted cursor-pointer hover:bg-surface/50 transition-colors",
-        onClick: handleUpload,
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-xl bg-surface border border-dashed border-border flex items-center justify-center mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Upload, { size: 20, className: "opacity-40" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Drop files here or click to upload" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1 opacity-60", children: "Files are saved to your project folder" })
-        ]
-      }
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: files.map((file) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-card border border-border rounded-xl overflow-hidden", children: files.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-10 text-text-muted", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-xl bg-surface border border-dashed border-border flex items-center justify-center mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Upload, { size: 20, className: "opacity-40" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "No files yet" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 mt-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleUploadFiles,
+            className: "text-xs text-text-muted hover:text-accent underline transition-colors",
+            children: "Upload files"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-border", children: "·" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleUploadFolder,
+            className: "text-xs text-text-muted hover:text-accent underline transition-colors",
+            children: "Upload folder"
+          }
+        )
+      ] })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: files.map((file) => /* @__PURE__ */ jsxRuntimeExports.jsx(
       FileRow,
       {
         file,
         onOpen: () => handleOpen(file),
-        onDelete: () => handleDelete(file)
+        onDelete: () => setPendingDelete(file)
       },
-      file.name
+      file.relativePath
     )) }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs mt-2", children: [
       files.length,
       " ",
       files.length === 1 ? "file" : "files",
+      files.length > 0 && ` · ${formatSize(files.reduce((s2, f2) => s2 + f2.size, 0))} total`,
       " · Stored in your FreelanceVault folder"
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ConfirmDeleteModal,
+      {
+        isOpen: pendingDelete !== null,
+        onClose: () => setPendingDelete(null),
+        onConfirm: confirmDelete,
+        itemType: "file",
+        itemName: pendingDelete?.name ?? ""
+      }
+    )
+  ] });
+}
+function CodeFoldersSection({ projectId, onGenerate }) {
+  const [folders, setFolders] = reactExports.useState([]);
+  const [loading, setLoading] = reactExports.useState(false);
+  const [pendingDelete, setPendingDelete] = reactExports.useState(null);
+  const [showClone, setShowClone] = reactExports.useState(false);
+  const [cloneUrl, setCloneUrl] = reactExports.useState("");
+  const [cloneFolderName, setCloneFolderName] = reactExports.useState("");
+  const [cloneStatus, setCloneStatus] = reactExports.useState("idle");
+  const [cloneError, setCloneError] = reactExports.useState("");
+  const load = reactExports.useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await window.electron.codeListFolders(projectId);
+      if (result.success) setFolders(result.folders);
+    } catch {
+    }
+    setLoading(false);
+  }, [projectId]);
+  reactExports.useEffect(() => {
+    load();
+  }, [load]);
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    await window.electron.codeDeleteFolder({ projectId, folderName: pendingDelete });
+    setFolders((prev) => prev.filter((f2) => f2.name !== pendingDelete));
+  };
+  const handleCloneUrlChange = (url) => {
+    setCloneUrl(url);
+    const name = extractRepoName(url);
+    if (name) setCloneFolderName(name);
+  };
+  const handleClone = async () => {
+    if (!cloneUrl.trim() || !cloneFolderName.trim()) return;
+    setCloneStatus("cloning");
+    setCloneError("");
+    try {
+      const result = await window.electron.gitClone({
+        projectId,
+        folderName: cloneFolderName.trim(),
+        url: cloneUrl.trim()
+      });
+      if (result.success) {
+        setCloneStatus("done");
+        await load();
+      } else {
+        setCloneStatus("error");
+        setCloneError(result.error || "Clone failed");
+      }
+    } catch (e3) {
+      setCloneStatus("error");
+      setCloneError(String(e3));
+    }
+  };
+  const resetClone = () => {
+    setShowClone(false);
+    setCloneUrl("");
+    setCloneFolderName("");
+    setCloneStatus("idle");
+    setCloneError("");
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-text", children: "Code Folders" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-0.5", children: "Generated scaffolds and cloned repositories" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          motion.button,
+          {
+            whileTap: { scale: 0.97 },
+            onClick: load,
+            disabled: loading,
+            className: "p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all",
+            title: "Refresh",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                animate: loading ? { rotate: 360 } : { rotate: 0 },
+                transition: loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {},
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 14 })
+              }
+            )
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          motion.button,
+          {
+            whileTap: { scale: 0.97 },
+            onClick: () => {
+              setShowClone((v2) => !v2);
+              setCloneStatus("idle");
+              setCloneError("");
+            },
+            className: "btn-secondary text-sm py-1.5 px-3",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 14 }),
+              "Clone Repo"
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          motion.button,
+          {
+            whileTap: { scale: 0.97 },
+            onClick: onGenerate,
+            className: "btn-secondary text-sm py-1.5 px-3",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 14 }),
+              "Generate"
+            ]
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: showClone && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      motion.div,
+      {
+        initial: { opacity: 0, height: 0 },
+        animate: { opacity: 1, height: "auto" },
+        exit: { opacity: 0, height: 0 },
+        className: "overflow-hidden mb-3",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-surface border border-border rounded-xl p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 14, className: "text-text-muted" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-text", children: "Clone Repository" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: resetClone,
+                className: "p-1 rounded-lg text-text-muted hover:text-text hover:bg-border/50 transition-all",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 14 })
+              }
+            )
+          ] }),
+          cloneStatus === "done" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-2 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-9 h-9 rounded-full bg-success/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { size: 18, className: "text-success" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-text", children: "Cloned successfully!" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: cloneFolderName }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: resetClone, className: "btn-secondary text-xs py-1 px-3 mt-1", children: "Clone another" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label text-xs", children: "GitHub URL" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "input w-full text-sm mt-1",
+                  placeholder: "https://github.com/user/repo",
+                  value: cloneUrl,
+                  onChange: (e3) => handleCloneUrlChange(e3.target.value),
+                  disabled: cloneStatus === "cloning"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label text-xs", children: "Folder name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "input w-full text-sm mt-1",
+                  placeholder: "repo-name",
+                  value: cloneFolderName,
+                  onChange: (e3) => setCloneFolderName(e3.target.value),
+                  disabled: cloneStatus === "cloning"
+                }
+              )
+            ] }),
+            cloneStatus === "error" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2 p-3 bg-danger/5 border border-danger/20 rounded-lg", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(AlertCircle, { size: 14, className: "text-danger shrink-0 mt-0.5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs", children: cloneError })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.button,
+              {
+                whileTap: { scale: 0.97 },
+                onClick: handleClone,
+                disabled: !cloneUrl.trim() || !cloneFolderName.trim() || cloneStatus === "cloning",
+                className: "btn-primary text-sm py-1.5 w-full justify-center disabled:opacity-50",
+                children: cloneStatus === "cloning" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    motion.div,
+                    {
+                      animate: { rotate: 360 },
+                      transition: { duration: 1, repeat: Infinity, ease: "linear" },
+                      className: "w-4 h-4 rounded-full border-2 border-white border-t-transparent"
+                    }
+                  ),
+                  "Cloning…"
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 14 }),
+                  "Clone"
+                ] })
+              }
+            )
+          ] })
+        ] })
+      }
+    ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-card border border-border rounded-xl overflow-hidden", children: folders.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-10 text-text-muted", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-xl bg-surface border border-dashed border-border flex items-center justify-center mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 20, className: "opacity-40" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "No code folders yet" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 mt-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: onGenerate,
+            className: "text-xs text-text-muted hover:text-accent underline transition-colors",
+            children: "Generate a scaffold"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-border", children: "·" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowClone(true),
+            className: "text-xs text-text-muted hover:text-accent underline transition-colors",
+            children: "Clone a repo"
+          }
+        )
+      ] })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: folders.map((folder) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        layout: true,
+        initial: { opacity: 0, y: 6 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -6 },
+        className: "flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors group border border-transparent hover:border-border",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Folder, { size: 16, className: "text-primary" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium truncate", children: folder.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-0.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-text-muted text-xs", children: formatSize(folder.size) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-border", children: "·" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-text-muted text-xs", children: format(parseISO(folder.modifiedAt), "MMM d, yyyy") })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.button,
+              {
+                whileTap: { scale: 0.9 },
+                onClick: () => window.electron.folderOpen(folder.path),
+                title: "Open in Finder",
+                className: "p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 14 })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.button,
+              {
+                whileTap: { scale: 0.9 },
+                onClick: () => window.electron.openInVscode(projectId),
+                title: "Open in VS Code",
+                className: "p-1.5 rounded-lg text-text-muted hover:text-[#007ACC] hover:bg-[#007ACC]/10 transition-all",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 14 })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.button,
+              {
+                whileTap: { scale: 0.9 },
+                onClick: () => window.electron.openInAntigravity(projectId),
+                title: "Open in Antigravity",
+                className: "p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { size: 14 })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.button,
+              {
+                whileTap: { scale: 0.9 },
+                onClick: () => setPendingDelete(folder.name),
+                title: "Delete folder",
+                className: "p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-all",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 14 })
+              }
+            )
+          ] })
+        ]
+      },
+      folder.name
+    )) }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs mt-2", children: [
+      folders.length,
+      " ",
+      folders.length === 1 ? "folder" : "folders",
+      folders.length > 0 && ` · ${formatSize(folders.reduce((s2, f2) => s2 + f2.size, 0))} total`,
+      " · Stored in your project directory"
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ConfirmDeleteModal,
+      {
+        isOpen: pendingDelete !== null,
+        onClose: () => setPendingDelete(null),
+        onConfirm: handleDelete,
+        itemType: "folder",
+        itemName: pendingDelete ?? "",
+        requireTypedConfirm: true
+      }
+    )
   ] });
 }
 function FileManager({ projectId }) {
+  const [showCodeGen, setShowCodeGen] = reactExports.useState(false);
+  const [codeFoldersKey, setCodeFoldersKey] = reactExports.useState(0);
   const openFolder = async () => {
     const folderPath = await window.electron.projectGetFolder(projectId);
     window.electron.folderOpen(folderPath);
   };
+  const handleCodeGenComplete = () => {
+    setShowCodeGen(false);
+    setCodeFoldersKey((k2) => k2 + 1);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: openFolder, className: "btn-secondary text-sm py-1.5 px-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 14 }),
-        "Open in Finder"
-      ] })
-    ] }),
+    showCodeGen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CodeGeneratorModal,
+      {
+        projectId,
+        onClose: handleCodeGenComplete,
+        onComplete: handleCodeGenComplete
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: openFolder, className: "btn-secondary text-sm py-1.5 px-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 14 }),
+      "Open in Finder"
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CodeFoldersSection,
+      {
+        projectId,
+        onGenerate: () => setShowCodeGen(true)
+      },
+      codeFoldersKey
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       FileSection,
       {
@@ -42507,10 +44010,13 @@ function ProjectDetail({ projectId }) {
     const folderPath = await window.electron.projectGetFolder(project.id);
     window.electron.folderOpen(folderPath);
   };
+  const openInVscode = () => window.electron.openInVscode(project.id);
+  const openInAntigravity = () => window.electron.openInAntigravity(project.id);
   const pct = project.projectCost > 0 ? Math.min(100, totalPaid / project.projectCost * 100) : 0;
+  const isPersonal = project.projectType === "personal";
   const tabs = [
     { key: "overview", label: "Overview" },
-    { key: "payments", label: "Payments" },
+    ...!isPersonal ? [{ key: "payments", label: "Payments" }] : [],
     { key: "credentials", label: "Credentials" },
     { key: "files", label: "Files" }
   ];
@@ -42533,8 +44039,9 @@ function ProjectDetail({ projectId }) {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-1 flex-wrap", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-xl font-bold text-text", children: project.projectName }),
+            isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "badge bg-accent/10 text-accent border border-accent/20", children: "Personal" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `badge border ${statusColors[project.status] || ""}`, children: statusLabels[project.status] || project.status }),
             isOverdue && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "badge bg-danger/10 text-danger border border-danger/20", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(AlertTriangle, { size: 10, className: "mr-1" }),
@@ -42543,7 +44050,7 @@ function ProjectDetail({ projectId }) {
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm", children: project.clientName })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 shrink-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 shrink-0 flex-wrap justify-end", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -42552,6 +44059,30 @@ function ProjectDetail({ projectId }) {
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 14 }),
                 "Open Folder"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: openInVscode,
+              title: "Open project folder in VS Code",
+              className: "btn-secondary text-sm py-1.5 px-3",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Code2, { size: 14 }),
+                "VS Code"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: openInAntigravity,
+              title: "Open project folder in Antigravity",
+              className: "btn-secondary text-sm py-1.5 px-3",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { size: 14 }),
+                "Antigravity"
               ]
             }
           ),
@@ -42576,7 +44107,7 @@ function ProjectDetail({ projectId }) {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6 mb-5 p-3 bg-surface rounded-xl border border-border", children: [
+      !isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6 mb-5 p-3 bg-surface rounded-xl border border-border", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "Total Value" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text font-bold", children: formatCurrency(project.projectCost, displayCurrency) })
@@ -42662,6 +44193,22 @@ function ProjectDetail({ projectId }) {
                 }
               )
             ] }),
+            project.githubUrl && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 p-3 bg-surface border border-border rounded-xl", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Github, { size: 14, className: "text-text-muted" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "GitHub Repository" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "a",
+                  {
+                    href: project.githubUrl,
+                    target: "_blank",
+                    rel: "noreferrer",
+                    className: "text-primary text-sm font-medium truncate block hover:underline",
+                    children: project.githubUrl.replace("https://github.com/", "")
+                  }
+                )
+              ] })
+            ] }),
             project.description && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "label", children: "Description" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-surface border border-border rounded-xl p-4 text-text-secondary text-sm leading-relaxed", children: project.description })
@@ -42689,7 +44236,7 @@ function ProjectDetail({ projectId }) {
               format(parseISO(project.updatedAt), "MMM d, yyyy")
             ] })
           ] }),
-          activeTab === "payments" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PaymentTimeline, { project }) }),
+          activeTab === "payments" && !isPersonal && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PaymentTimeline, { project }) }),
           activeTab === "credentials" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CredentialVault, { projectId: project.id }) }),
           activeTab === "files" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FileManager, { projectId: project.id }) })
         ]
@@ -42697,36 +44244,18 @@ function ProjectDetail({ projectId }) {
       activeTab
     ) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: showEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(CreateProjectModal, { editProject: project, onClose: () => setShowEdit(false) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: confirmDelete && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: () => setConfirmDelete(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      motion.div,
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ConfirmDeleteModal,
       {
-        initial: { opacity: 0, scale: 0.95 },
-        animate: { opacity: 1, scale: 1 },
-        exit: { opacity: 0, scale: 0.95 },
-        className: "bg-card border border-border rounded-2xl p-6 max-w-sm w-full",
-        onClick: (e3) => e3.stopPropagation(),
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 20, className: "text-danger" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-text text-center mb-2", children: "Delete Project?" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-sm text-center mb-6", children: [
-            "This will permanently delete “",
-            project.projectName,
-            "” and all its payments and credentials. This action cannot be undone."
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => setConfirmDelete(false),
-                className: "btn-secondary flex-1 justify-center",
-                children: "Cancel"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDelete, className: "btn-danger flex-1 justify-center", children: "Delete Project" })
-          ] })
-        ]
+        isOpen: confirmDelete,
+        onClose: () => setConfirmDelete(false),
+        onConfirm: handleDelete,
+        itemType: "project",
+        itemName: project.projectName,
+        description: `This will permanently delete "${project.projectName}" and all its payments and credentials. This action cannot be undone.`,
+        requireTypedConfirm: true
       }
-    ) }) })
+    )
   ] });
 }
 function formatCurrencyShort(amount, currency = "USD") {
@@ -42750,7 +44279,7 @@ function formatFull(amount, currency = "USD") {
 }
 const STATUS_COLORS = {
   not_started: "#64748b",
-  in_progress: "#06b6d4",
+  in_progress: "#10C9A0",
   completed: "#10b981",
   on_hold: "#f59e0b",
   cancelled: "#ef4444"
@@ -42763,14 +44292,15 @@ const STATUS_LABELS = {
   cancelled: "Cancelled"
 };
 const PAYMENT_TYPE_COLORS = {
-  advance: "#06b6d4",
-  milestone: "#7c3aed",
+  advance: "#10C9A0",
+  milestone: "#3D6EF5",
   final: "#10b981",
   other: "#64748b"
 };
 function Analytics() {
   const { db: db2, displayCurrency } = useAppStore();
-  const { projects, payments } = db2;
+  const { payments } = db2;
+  const projects = db2.projects.filter((p2) => (p2.projectType || "freelance") === "freelance");
   const monthlyRevenue = reactExports.useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const date2 = subMonths(/* @__PURE__ */ new Date(), 11 - i);
@@ -42833,7 +44363,7 @@ function Analytics() {
     return { totalEarned, totalValue, completionRate, avgProjectValue };
   }, [projects, payments]);
   const tooltipStyle = {
-    contentStyle: { background: "#1a1a27", border: "1px solid #252538", borderRadius: "8px", color: "#f1f5f9", fontSize: 12 }
+    contentStyle: { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "8px", color: "#111827", fontSize: 12 }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 max-w-6xl", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0, y: -5 }, animate: { opacity: 1, y: 0 }, className: "mb-8", children: [
@@ -42878,13 +44408,13 @@ function Analytics() {
             /* @__PURE__ */ jsxRuntimeExports.jsx(DollarSign, { size: 32, className: "mx-auto mb-2 opacity-20" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No payment data yet" })
           ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { width: "100%", height: 220, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: monthlyRevenue, margin: { top: 5, right: 5, left: -15, bottom: 5 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#252538", vertical: false }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#E5E7EB", vertical: false }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(XAxis, { dataKey: "month", tick: { fill: "#64748b", fontSize: 11 }, axisLine: false, tickLine: false }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(YAxis, { tick: { fill: "#64748b", fontSize: 11 }, axisLine: false, tickLine: false, tickFormatter: (v2) => formatCurrencyShort(v2, displayCurrency) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { ...tooltipStyle, formatter: (v2) => [formatFull(v2, displayCurrency), "Revenue"] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "revBar", x1: "0", y1: "0", x2: "0", y2: "1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#7c3aed" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#06b6d4" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#3D6EF5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#10C9A0" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Bar, { dataKey: "revenue", fill: "url(#revBar)", radius: [4, 4, 0, 0], maxBarSize: 36 })
           ] }) })
@@ -42976,19 +44506,720 @@ function Analytics() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "font-semibold text-text", children: "Revenue Trend" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { width: "100%", height: 160, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(LineChart, { data: monthlyRevenue, margin: { top: 5, right: 5, left: -15, bottom: 5 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#252538", vertical: false }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CartesianGrid, { strokeDasharray: "3 3", stroke: "#E5E7EB", vertical: false }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(XAxis, { dataKey: "month", tick: { fill: "#64748b", fontSize: 11 }, axisLine: false, tickLine: false }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(YAxis, { tick: { fill: "#64748b", fontSize: 11 }, axisLine: false, tickLine: false, tickFormatter: (v2) => formatCurrencyShort(v2, displayCurrency) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { ...tooltipStyle, formatter: (v2) => [formatFull(v2), "Revenue"] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "lineGrad", x1: "0", y1: "0", x2: "1", y2: "0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#7c3aed" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#06b6d4" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#3D6EF5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#10C9A0" })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Line, { type: "monotone", dataKey: "revenue", stroke: "url(#lineGrad)", strokeWidth: 2.5, dot: { fill: "#7c3aed", r: 3 }, activeDot: { r: 5, fill: "#06b6d4" } })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Line, { type: "monotone", dataKey: "revenue", stroke: "url(#lineGrad)", strokeWidth: 2.5, dot: { fill: "#3D6EF5", r: 3 }, activeDot: { r: 5, fill: "#10C9A0" } })
           ] }) })
         ]
       }
     )
+  ] });
+}
+function roundRectPath(ctx, x2, y2, w2, h2, r2) {
+  ctx.beginPath();
+  ctx.moveTo(x2 + r2, y2);
+  ctx.lineTo(x2 + w2 - r2, y2);
+  ctx.quadraticCurveTo(x2 + w2, y2, x2 + w2, y2 + r2);
+  ctx.lineTo(x2 + w2, y2 + h2 - r2);
+  ctx.quadraticCurveTo(x2 + w2, y2 + h2, x2 + w2 - r2, y2 + h2);
+  ctx.lineTo(x2 + r2, y2 + h2);
+  ctx.quadraticCurveTo(x2, y2 + h2, x2, y2 + h2 - r2);
+  ctx.lineTo(x2, y2 + r2);
+  ctx.quadraticCurveTo(x2, y2, x2 + r2, y2);
+  ctx.closePath();
+}
+function drawField(ctx, label, value, x2, y2, maxWidth = 340) {
+  ctx.font = '500 10px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+  ctx.fillStyle = "#6b7280";
+  ctx.fillText(label.toUpperCase(), x2, y2);
+  ctx.font = '600 17px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+  ctx.fillStyle = "#e5e7eb";
+  ctx.fillText(value, x2, y2 + 24, maxWidth);
+}
+function maskAccountNumber(num) {
+  const clean = num.replace(/\s/g, "");
+  if (clean.length <= 4) return clean;
+  const last4 = clean.slice(-4);
+  const masked = "•".repeat(Math.max(0, clean.length - 4));
+  const full = masked + last4;
+  return full.replace(/.{4}(?=.)/g, "$&  ");
+}
+function generateBankCard(detail, userName) {
+  const canvas = document.createElement("canvas");
+  const W2 = 960;
+  const H2 = 520;
+  canvas.width = W2;
+  canvas.height = H2;
+  const ctx = canvas.getContext("2d");
+  const bgGrad = ctx.createLinearGradient(0, 0, W2, H2);
+  bgGrad.addColorStop(0, "#0d0d1a");
+  bgGrad.addColorStop(0.6, "#13131f");
+  bgGrad.addColorStop(1, "#0a0a14");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W2, H2);
+  ctx.fillStyle = "rgba(124, 58, 237, 0.03)";
+  for (let i = 0; i < 200; i++) {
+    const px2 = Math.random() * W2;
+    const py = Math.random() * H2;
+    const r2 = Math.random() * 2;
+    ctx.beginPath();
+    ctx.arc(px2, py, r2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const glow1 = ctx.createRadialGradient(150, 100, 0, 150, 100, 300);
+  glow1.addColorStop(0, "rgba(124, 58, 237, 0.12)");
+  glow1.addColorStop(1, "rgba(124, 58, 237, 0)");
+  ctx.fillStyle = glow1;
+  ctx.fillRect(0, 0, W2, H2);
+  const glow2 = ctx.createRadialGradient(W2 - 100, H2 - 100, 0, W2 - 100, H2 - 100, 280);
+  glow2.addColorStop(0, "rgba(6, 182, 212, 0.1)");
+  glow2.addColorStop(1, "rgba(6, 182, 212, 0)");
+  ctx.fillStyle = glow2;
+  ctx.fillRect(0, 0, W2, H2);
+  roundRectPath(ctx, 28, 28, W2 - 56, H2 - 56, 24);
+  ctx.strokeStyle = "rgba(255,255,255,0.06)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  const stripe = ctx.createLinearGradient(0, 0, W2, 0);
+  stripe.addColorStop(0, "#7c3aed");
+  stripe.addColorStop(0.5, "#9333ea");
+  stripe.addColorStop(1, "#06b6d4");
+  ctx.fillStyle = stripe;
+  ctx.beginPath();
+  ctx.moveTo(28, 28);
+  ctx.lineTo(W2 - 28, 28);
+  ctx.quadraticCurveTo(W2 - 28, 28, W2 - 28, 28);
+  roundRectPath(ctx, 28, 28, W2 - 56, 5, 2);
+  ctx.fill();
+  const iconX = 64;
+  const iconY = 62;
+  const iconSize = 40;
+  const iconGrad = ctx.createLinearGradient(iconX, iconY, iconX + iconSize, iconY + iconSize);
+  iconGrad.addColorStop(0, "#7c3aed");
+  iconGrad.addColorStop(1, "#06b6d4");
+  roundRectPath(ctx, iconX, iconY, iconSize, iconSize, 10);
+  ctx.fillStyle = iconGrad;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(iconX + 10, iconY + 11, 20, 18);
+  ctx.beginPath();
+  ctx.moveTo(iconX + 20, iconY + 19);
+  ctx.arc(iconX + 20, iconY + 19, 3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.font = '700 20px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+  const brandGrad = ctx.createLinearGradient(iconX + iconSize + 12, 0, iconX + iconSize + 200, 0);
+  brandGrad.addColorStop(0, "#c4b5fd");
+  brandGrad.addColorStop(1, "#67e8f9");
+  ctx.fillStyle = brandGrad;
+  ctx.fillText("FreelanceVault", iconX + iconSize + 12, iconY + 17);
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+  ctx.fillStyle = "#6b7280";
+  ctx.fillText("Payment Details", iconX + iconSize + 12, iconY + 35);
+  if (detail.label) {
+    const badgeText = detail.label;
+    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+    const tw = ctx.measureText(badgeText).width;
+    const bx = W2 - 64 - tw - 16;
+    const by = iconY + 4;
+    roundRectPath(ctx, bx, by, tw + 16, 22, 11);
+    ctx.fillStyle = "rgba(124, 58, 237, 0.2)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(124, 58, 237, 0.4)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = "#a78bfa";
+    ctx.fillText(badgeText, bx + 8, by + 15);
+  }
+  const divY = 130;
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(64, divY);
+  ctx.lineTo(W2 - 64, divY);
+  ctx.stroke();
+  ctx.font = '400 10px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+  ctx.fillStyle = "#4b5563";
+  ctx.fillText("ACCOUNT HOLDER", 64, 160);
+  ctx.font = '700 30px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+  ctx.fillStyle = "#f9fafb";
+  ctx.fillText(detail.accountHolder.toUpperCase(), 64, 198);
+  const col1 = 64;
+  const col2 = 360;
+  const col3 = 660;
+  let rowY = 248;
+  drawField(ctx, "Bank", detail.bankName, col1, rowY, 270);
+  drawField(ctx, "Account Number", maskAccountNumber(detail.accountNumber), col2, rowY, 270);
+  drawField(ctx, "Account Type", detail.accountType.charAt(0).toUpperCase() + detail.accountType.slice(1), col3, rowY, 220);
+  rowY += 80;
+  if (detail.ifsc) {
+    drawField(ctx, "IFSC Code", detail.ifsc, col1, rowY, 260);
+  } else if (detail.swift) {
+    drawField(ctx, "SWIFT / BIC", detail.swift, col1, rowY, 260);
+  } else if (detail.routingNumber) {
+    drawField(ctx, "Routing Number", detail.routingNumber, col1, rowY, 260);
+  }
+  if (detail.branchName) {
+    drawField(ctx, "Branch", detail.branchName, col2, rowY, 270);
+  }
+  const hasUpi = !!detail.upiId;
+  const hasPaypal = !!detail.paypalEmail;
+  if (hasUpi || hasPaypal) {
+    rowY += 80;
+    if (hasUpi) {
+      roundRectPath(ctx, col1 - 8, rowY - 20, 290, 50, 10);
+      ctx.fillStyle = "rgba(16, 185, 129, 0.08)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      drawField(ctx, "UPI ID", detail.upiId, col1, rowY, 260);
+    }
+    if (hasPaypal) {
+      const ppX = hasUpi ? col2 : col1;
+      roundRectPath(ctx, ppX - 8, rowY - 20, 290, 50, 10);
+      ctx.fillStyle = "rgba(6, 182, 212, 0.08)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      drawField(ctx, "PayPal", detail.paypalEmail, ppX, rowY, 260);
+    }
+  }
+  const footY = H2 - 44;
+  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(64, footY - 12);
+  ctx.lineTo(W2 - 64, footY - 12);
+  ctx.stroke();
+  ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+  ctx.fillStyle = "#374151";
+  const dateStr = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  ctx.fillText(`Shared via FreelanceVault  ·  ${userName}  ·  ${dateStr}`, 64, footY);
+  if (detail.isDefault) {
+    ctx.font = "400 11px -apple-system";
+    ctx.fillStyle = "#f59e0b";
+    ctx.fillText("★  Default Account", W2 - 200, footY);
+  }
+  return canvas.toDataURL("image/png");
+}
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+function BankDetailForm({ initial, onSave, onClose }) {
+  const [label, setLabel] = reactExports.useState(initial?.label || "");
+  const [accountHolder, setAccountHolder] = reactExports.useState(initial?.accountHolder || "");
+  const [bankName, setBankName] = reactExports.useState(initial?.bankName || "");
+  const [accountNumber, setAccountNumber] = reactExports.useState(initial?.accountNumber || "");
+  const [accountType, setAccountType] = reactExports.useState(initial?.accountType || "savings");
+  const [ifsc, setIfsc] = reactExports.useState(initial?.ifsc || "");
+  const [swift, setSwift] = reactExports.useState(initial?.swift || "");
+  const [routingNumber, setRoutingNumber] = reactExports.useState(initial?.routingNumber || "");
+  const [branchName, setBranchName] = reactExports.useState(initial?.branchName || "");
+  const [upiId, setUpiId] = reactExports.useState(initial?.upiId || "");
+  const [paypalEmail, setPaypalEmail] = reactExports.useState(initial?.paypalEmail || "");
+  const [notes, setNotes] = reactExports.useState(initial?.notes || "");
+  const [isDefault, setIsDefault] = reactExports.useState(initial?.isDefault ?? false);
+  const [errors, setErrors] = reactExports.useState({});
+  const validate = () => {
+    const e3 = {};
+    if (!accountHolder.trim()) e3.accountHolder = "Required";
+    if (!bankName.trim()) e3.bankName = "Required";
+    if (!accountNumber.trim()) e3.accountNumber = "Required";
+    setErrors(e3);
+    return Object.keys(e3).length === 0;
+  };
+  const handleSubmit = (e3) => {
+    e3.preventDefault();
+    if (!validate()) return;
+    onSave({
+      id: initial?.id || generateId(),
+      label: label.trim() || "My Account",
+      accountHolder: accountHolder.trim(),
+      bankName: bankName.trim(),
+      accountNumber: accountNumber.trim(),
+      accountType,
+      ifsc: ifsc.trim() || void 0,
+      swift: swift.trim() || void 0,
+      routingNumber: routingNumber.trim() || void 0,
+      branchName: branchName.trim() || void 0,
+      upiId: upiId.trim() || void 0,
+      paypalEmail: paypalEmail.trim() || void 0,
+      notes: notes.trim() || void 0,
+      isDefault,
+      createdAt: initial?.createdAt || (/* @__PURE__ */ new Date()).toISOString()
+    });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: (e3) => e3.target === e3.currentTarget && onClose(), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      initial: { opacity: 0, scale: 0.95, y: 10 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.95, y: 10 },
+      transition: { duration: 0.2 },
+      className: "modal-content",
+      style: { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Building2, { size: 16, className: "text-primary" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-base font-bold text-text", children: initial ? "Edit Bank Account" : "Add Bank Account" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-text-muted hover:text-text p-1.5 rounded-lg hover:bg-surface transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 16 }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "p-6 space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Account Label" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: label, onChange: (e3) => setLabel(e3.target.value), placeholder: "e.g. Primary Account, Business Account", className: "input" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Account Holder Name *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: accountHolder, onChange: (e3) => setAccountHolder(e3.target.value), placeholder: "John Doe", className: "input" }),
+              errors.accountHolder && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.accountHolder })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Bank Name *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: bankName, onChange: (e3) => setBankName(e3.target.value), placeholder: "HDFC Bank", className: "input" }),
+              errors.bankName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.bankName })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Account Number *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: accountNumber, onChange: (e3) => setAccountNumber(e3.target.value), placeholder: "XXXX XXXX XXXX", className: "input font-mono" }),
+              errors.accountNumber && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-danger text-xs mt-1", children: errors.accountNumber })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Account Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: accountType, onChange: (e3) => setAccountType(e3.target.value), className: "input", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "savings", children: "Savings" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "current", children: "Current" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "checking", children: "Checking" })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "IFSC Code" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: ifsc, onChange: (e3) => setIfsc(e3.target.value.toUpperCase()), placeholder: "HDFC0001234", className: "input font-mono text-sm" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "SWIFT / BIC" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: swift, onChange: (e3) => setSwift(e3.target.value.toUpperCase()), placeholder: "HDFCINBB", className: "input font-mono text-sm" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Routing No." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: routingNumber, onChange: (e3) => setRoutingNumber(e3.target.value), placeholder: "021000021", className: "input font-mono text-sm" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Branch Name (Optional)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: branchName, onChange: (e3) => setBranchName(e3.target.value), placeholder: "MG Road, Bangalore", className: "input" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "UPI ID" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: upiId, onChange: (e3) => setUpiId(e3.target.value), placeholder: "name@upi", className: "input" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "PayPal Email" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "email", value: paypalEmail, onChange: (e3) => setPaypalEmail(e3.target.value), placeholder: "you@paypal.com", className: "input" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "label", children: "Notes (Optional)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { value: notes, onChange: (e3) => setNotes(e3.target.value), placeholder: "Any additional payment instructions...", rows: 2, className: "input resize-none" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              onClick: () => setIsDefault((v2) => !v2),
+              className: `flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${isDefault ? "border-warning/40 bg-warning/5" : "border-border hover:border-border/80 bg-surface"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isDefault ? "border-warning bg-warning" : "border-border"}`, children: isDefault && /* @__PURE__ */ jsxRuntimeExports.jsx(Star, { size: 11, className: "text-background", fill: "currentColor" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium", children: "Set as default account" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "Shown first on the Bank Details page" })
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 pt-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, className: "btn-secondary flex-1 justify-center", children: "Cancel" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn-primary flex-1 justify-center", children: initial ? "Save Changes" : "Add Account" })
+          ] })
+        ] })
+      ]
+    }
+  ) });
+}
+function ShareModal({ detail, userName, onClose }) {
+  const [imageUrl, setImageUrl] = reactExports.useState(null);
+  const [copied, setCopied] = reactExports.useState(false);
+  const [saved, setSaved] = reactExports.useState(false);
+  const [generating, setGenerating] = reactExports.useState(false);
+  const hasGenerated = reactExports.useRef(false);
+  const generate = reactExports.useCallback(async () => {
+    if (hasGenerated.current) return;
+    hasGenerated.current = true;
+    setGenerating(true);
+    await new Promise((r2) => setTimeout(r2, 100));
+    const url = generateBankCard(detail, userName);
+    setImageUrl(url);
+    setGenerating(false);
+  }, [detail, userName]);
+  reactExports.useEffect(() => {
+    generate();
+  }, [generate]);
+  const handleCopyToClipboard = async () => {
+    if (!imageUrl) return;
+    const result = await window.electron.bankCopyImage(imageUrl);
+    if (result.success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3e3);
+    }
+  };
+  const handleSave = async () => {
+    if (!imageUrl) return;
+    const result = await window.electron.bankSaveImage(imageUrl);
+    if (result.success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
+  };
+  const handleWhatsApp = async () => {
+    if (!imageUrl) return;
+    await window.electron.bankCopyImage(imageUrl);
+    setCopied(true);
+    setTimeout(() => {
+      const a2 = document.createElement("a");
+      a2.href = "https://web.whatsapp.com";
+      a2.target = "_blank";
+      a2.rel = "noopener";
+      a2.click();
+    }, 400);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-overlay", onClick: (e3) => e3.target === e3.currentTarget && onClose(), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      initial: { opacity: 0, scale: 0.96, y: 12 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.96, y: 12 },
+      transition: { duration: 0.22 },
+      className: "modal-content",
+      style: { maxWidth: 680, width: "100%" },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-5 border-b border-border", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Share2, { size: 16, className: "text-success" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-bold text-text", children: "Share Payment Details" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs", children: [
+                detail.label,
+                " · ",
+                detail.bankName
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-text-muted hover:text-text p-1.5 rounded-lg hover:bg-surface transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 16 }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative rounded-2xl overflow-hidden border border-border bg-surface", style: { aspectRatio: "960/520" }, children: generating || !imageUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 flex flex-col items-center justify-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                animate: { rotate: 360 },
+                transition: { duration: 1.2, repeat: Infinity, ease: "linear" },
+                className: "w-8 h-8 rounded-full border-2 border-primary border-t-transparent"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs", children: "Generating card…" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.img,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              src: imageUrl,
+              alt: "Bank details card",
+              className: "w-full h-full object-cover"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: copied && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, y: -8 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -8 },
+              className: "flex items-center gap-3 p-3 rounded-xl bg-success/10 border border-success/20",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 16, className: "text-success shrink-0" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-success text-sm font-medium", children: "Image copied to clipboard!" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-success/70 text-xs", children: "Open WhatsApp and press Cmd+V (or Ctrl+V) to paste it in any chat." })
+                ] })
+              ]
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              motion.button,
+              {
+                whileTap: { scale: 0.97 },
+                onClick: handleWhatsApp,
+                disabled: !imageUrl,
+                className: "flex flex-col items-center gap-2 p-4 rounded-xl bg-[#25d366]/10 border border-[#25d366]/25 hover:border-[#25d366]/50 hover:bg-[#25d366]/15 transition-all disabled:opacity-40",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-10 rounded-full bg-[#25d366] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MessageCircle, { size: 20, fill: "white", className: "text-white" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[#25d366] font-semibold text-sm", children: "WhatsApp" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px]", children: "Copy & open" })
+                  ] })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              motion.button,
+              {
+                whileTap: { scale: 0.97 },
+                onClick: handleCopyToClipboard,
+                disabled: !imageUrl,
+                className: `flex flex-col items-center gap-2 p-4 rounded-xl border transition-all disabled:opacity-40 ${copied ? "bg-success/10 border-success/30" : "bg-surface border-border hover:border-primary/40 hover:bg-primary/5"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-10 h-10 rounded-full flex items-center justify-center ${copied ? "bg-success/20" : "bg-primary/10"}`, children: copied ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 20, className: "text-success" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Copy, { size: 20, className: "text-primary" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `font-semibold text-sm ${copied ? "text-success" : "text-text"}`, children: copied ? "Copied!" : "Copy Image" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px]", children: "To clipboard" })
+                  ] })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              motion.button,
+              {
+                whileTap: { scale: 0.97 },
+                onClick: handleSave,
+                disabled: !imageUrl,
+                className: `flex flex-col items-center gap-2 p-4 rounded-xl border transition-all disabled:opacity-40 ${saved ? "bg-accent/10 border-accent/30" : "bg-surface border-border hover:border-accent/40 hover:bg-accent/5"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-10 h-10 rounded-full flex items-center justify-center ${saved ? "bg-accent/20" : "bg-accent/10"}`, children: saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 20, className: "text-accent" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { size: 20, className: "text-accent" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `font-semibold text-sm ${saved ? "text-accent" : "text-text"}`, children: saved ? "Saved!" : "Save PNG" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-[10px]", children: "To desktop" })
+                  ] })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2.5 p-3 rounded-xl bg-surface border border-border", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AlertCircle, { size: 14, className: "text-text-muted mt-0.5 shrink-0" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-muted text-xs leading-relaxed", children: [
+              "Click ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[#25d366] font-semibold", children: "WhatsApp" }),
+              " to copy the image and open WhatsApp Web automatically. Then paste it into any chat using ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("kbd", { className: "px-1 py-0.5 rounded bg-card border border-border font-mono text-[10px]", children: "⌘V" }),
+              ". You can also save it as a PNG and share from any app."
+            ] })
+          ] })
+        ] })
+      ]
+    }
+  ) });
+}
+function AccountCard({ detail, onEdit, onDelete, onShare }) {
+  const [confirmDelete, setConfirmDelete] = reactExports.useState(false);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      layout: true,
+      initial: { opacity: 0, y: 8 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.96 },
+      className: "relative bg-card border border-border rounded-2xl p-5 group hover:border-primary/30 transition-all",
+      children: [
+        detail.isDefault && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 border border-warning/20", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Star, { size: 10, className: "text-warning", fill: "currentColor" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-warning text-[10px] font-semibold", children: "Default" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Building2, { size: 22, className: "text-primary" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 mb-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text font-bold text-base", children: detail.bankName }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm", children: detail.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { size: 13, className: "text-text-muted" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-sm text-text-muted", children: [
+                "•••• •••• ",
+                detail.accountNumber.replace(/\s/g, "").slice(-4)
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "badge text-[10px]", children: detail.accountType })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text text-sm font-medium mt-1", children: detail.accountHolder }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5 mt-2", children: [
+              detail.ifsc && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted font-mono", children: [
+                "IFSC: ",
+                detail.ifsc
+              ] }),
+              detail.swift && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted font-mono", children: [
+                "SWIFT: ",
+                detail.swift
+              ] }),
+              detail.upiId && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] px-2 py-0.5 rounded-full bg-success/10 border border-success/20 text-success", children: [
+                "UPI: ",
+                detail.upiId
+              ] }),
+              detail.paypalEmail && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent", children: "PayPal" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-4 pt-4 border-t border-border", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.button,
+            {
+              whileTap: { scale: 0.97 },
+              onClick: onShare,
+              className: "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-[#25d366]/10 border border-[#25d366]/20 text-[#25d366] hover:bg-[#25d366]/20 hover:border-[#25d366]/40 transition-all text-sm font-semibold",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MessageCircle, { size: 15 }),
+                "Share"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.button, { whileTap: { scale: 0.97 }, onClick: onEdit, className: "btn-secondary py-2 px-4 text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(PenLine, { size: 13 }),
+            "Edit"
+          ] }),
+          confirmDelete ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  onDelete();
+                  setConfirmDelete(false);
+                },
+                className: "py-2 px-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-xs font-semibold hover:bg-danger/20 transition-all",
+                children: "Delete"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setConfirmDelete(false), className: "py-2 px-3 rounded-xl bg-surface border border-border text-text-muted text-xs hover:text-text transition-all", children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.button,
+            {
+              whileTap: { scale: 0.97 },
+              onClick: () => setConfirmDelete(true),
+              className: "p-2 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-all border border-transparent hover:border-danger/20",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 15 })
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
+function BankDetailsPage() {
+  const { bankDetails, saveBankDetail, deleteBankDetail, user } = useAppStore();
+  const [showForm, setShowForm] = reactExports.useState(false);
+  const [editing, setEditing] = reactExports.useState(null);
+  const [sharing, setSharing] = reactExports.useState(null);
+  const handleSave = async (detail) => {
+    await saveBankDetail(detail);
+    setShowForm(false);
+    setEditing(null);
+  };
+  const handleEdit = (detail) => {
+    setEditing(detail);
+    setShowForm(true);
+  };
+  const sorted = [...bankDetails].sort((a2, b2) => (b2.isDefault ? 1 : 0) - (a2.isDefault ? 1 : 0));
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full flex flex-col", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-8 py-6 border-b border-border shrink-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Banknote, { size: 19, className: "text-primary" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-xl font-bold text-text", children: "Bank Details" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-xs mt-0.5", children: bankDetails.length === 0 ? "No accounts yet" : `${bankDetails.length} account${bankDetails.length > 1 ? "s" : ""}` })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        motion.button,
+        {
+          whileTap: { scale: 0.97 },
+          onClick: () => {
+            setEditing(null);
+            setShowForm(true);
+          },
+          className: "btn-primary text-sm",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 16 }),
+            "Add Account"
+          ]
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-8 py-6", children: bankDetails.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 16 },
+        animate: { opacity: 1, y: 0 },
+        className: "flex flex-col items-center justify-center h-full text-center max-w-sm mx-auto",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/15 flex items-center justify-center mb-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Building2, { size: 36, className: "text-primary/60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-text font-bold text-lg mb-2", children: "No bank accounts yet" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-muted text-sm leading-relaxed mb-6", children: "Add your bank details to quickly generate a beautiful payment card and share it on WhatsApp with clients." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.button,
+            {
+              whileTap: { scale: 0.97 },
+              onClick: () => setShowForm(true),
+              className: "btn-primary",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 16 }),
+                "Add First Account"
+              ]
+            }
+          )
+        ]
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: sorted.map((detail) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AccountCard,
+      {
+        detail,
+        onEdit: () => handleEdit(detail),
+        onDelete: () => deleteBankDetail(detail.id),
+        onShare: () => setSharing(detail)
+      },
+      detail.id
+    )) }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { children: [
+      showForm && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        BankDetailForm,
+        {
+          initial: editing ?? void 0,
+          onSave: handleSave,
+          onClose: () => {
+            setShowForm(false);
+            setEditing(null);
+          }
+        },
+        "form"
+      ),
+      sharing && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ShareModal,
+        {
+          detail: sharing,
+          userName: user?.name || "Freelancer",
+          onClose: () => setSharing(null)
+        },
+        "share"
+      )
+    ] })
   ] });
 }
 const pageVariants = {
@@ -43008,6 +45239,8 @@ function AppLayout() {
         return selectedProjectId ? /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectDetail, { projectId: selectedProjectId }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectList, {});
       case "analytics":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(Analytics, {});
+      case "bank-details":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(BankDetailsPage, {});
       default:
         return /* @__PURE__ */ jsxRuntimeExports.jsx(Dashboard, {});
     }

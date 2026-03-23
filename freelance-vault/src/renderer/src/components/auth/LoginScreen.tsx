@@ -102,9 +102,9 @@ export function PinInput({ onComplete, error, onErrorClear, label }: PinInputPro
                   ? error
                     ? '#ef4444'
                     : submitting
-                      ? '#06b6d4'
-                      : '#7c3aed'
-                  : 'rgba(37,37,56,1)'
+                      ? '#10B981'
+                      : '#3D6EF5'
+                  : '#E5E7EB'
             }}
             transition={{ duration: 0.15 }}
             className="w-3.5 h-3.5 rounded-full border-2"
@@ -114,9 +114,9 @@ export function PinInput({ onComplete, error, onErrorClear, label }: PinInputPro
                   ? error
                     ? '#ef4444'
                     : submitting
-                      ? '#06b6d4'
-                      : '#7c3aed'
-                  : '#252538'
+                      ? '#10B981'
+                      : '#3D6EF5'
+                  : '#D1D5DB'
             }}
           />
         ))}
@@ -165,10 +165,10 @@ export function PinInput({ onComplete, error, onErrorClear, label }: PinInputPro
                   {row.map((d) => (
                     <motion.button
                       key={d}
-                      whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                      whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                       onClick={() => pressKeypad(d)}
                       className="w-16 h-14 rounded-2xl text-xl font-semibold text-text flex items-center justify-center select-none transition-colors"
-                      style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                      style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                     >
                       {d}
                     </motion.button>
@@ -178,10 +178,10 @@ export function PinInput({ onComplete, error, onErrorClear, label }: PinInputPro
               <div className="flex gap-3">
                 <div className="w-16 h-14" />
                 <motion.button
-                  whileTap={{ scale: 0.88, backgroundColor: 'rgba(124,58,237,0.2)' }}
+                  whileTap={{ scale: 0.88, backgroundColor: 'rgba(61,110,245,0.12)' }}
                   onClick={() => pressKeypad('0')}
                   className="w-16 h-14 rounded-2xl text-xl font-semibold text-text flex items-center justify-center select-none"
-                  style={{ background: 'rgba(26,26,39,0.9)', border: '1px solid rgba(37,37,56,0.8)' }}
+                  style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
                 >
                   0
                 </motion.button>
@@ -190,7 +190,7 @@ export function PinInput({ onComplete, error, onErrorClear, label }: PinInputPro
                   onClick={deleteKeypad}
                   disabled={pin.length === 0}
                   className="w-16 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:text-text disabled:opacity-20 transition-all"
-                  style={{ background: 'rgba(37,37,56,0.3)' }}
+                  style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}
                 >
                   <Delete size={18} />
                 </motion.button>
@@ -236,13 +236,13 @@ export default function LoginScreen(): JSX.Element {
       {/* Ambient blobs */}
       <motion.div
         className="absolute w-[700px] h-[700px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)', top: '-20%', left: '-10%' }}
+        style={{ background: 'radial-gradient(circle, rgba(61,110,245,0.10) 0%, transparent 70%)', top: '-20%', left: '-10%' }}
         animate={{ scale: [1, 1.05, 1], x: [0, 20, 0] }}
         transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
         className="absolute w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)', bottom: '-10%', right: '-5%' }}
+        style={{ background: 'radial-gradient(circle, rgba(16,201,160,0.08) 0%, transparent 70%)', bottom: '-10%', right: '-5%' }}
         animate={{ scale: [1, 1.08, 1], x: [0, -15, 0] }}
         transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
       />

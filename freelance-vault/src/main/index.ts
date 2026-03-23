@@ -1219,7 +1219,7 @@ app.whenReady().then(() => {
       const rootFolder = store.get('rootFolder') as string
       const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', projectId)
       const excluded = new Set(['files', 'docs', 'credentials'])
-      const folders: { name: string; path: string; size: number; createdAt: string; modifiedAt: string }[] = []
+      const folders: { name: string; path: string; size: number; isGitRepo: boolean; createdAt: string; modifiedAt: string }[] = []
       if (fs.existsSync(projectFolder)) {
         for (const item of fs.readdirSync(projectFolder)) {
           if (excluded.has(item)) continue
@@ -1231,6 +1231,7 @@ app.whenReady().then(() => {
                 name: item,
                 path: fullPath,
                 size: getDirSizeSync(fullPath),
+                isGitRepo: fs.existsSync(join(fullPath, '.git')),
                 createdAt: stat.birthtime.toISOString(),
                 modifiedAt: stat.mtime.toISOString(),
               })
@@ -1282,6 +1283,27 @@ app.whenReady().then(() => {
       }
     }
   )
+
+  // ─── Git Pull ────────────────────────────────────────────────
+  ipcMain.handle('git:pull', async (_event, payload: { projectId: string; folderName: string }) => {
+    try {
+      const rootFolder = store.get('rootFolder') as string
+      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
+      }
+      const { stdout } = await execAsync('git pull', {
+        cwd: folderPath,
+        env,
+        timeout: 60_000,
+        shell: '/bin/zsh' as const,
+      })
+      return { success: true, output: stdout.trim() }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
 
   // ─── Open in Editor ──────────────────────────────────────────
   ipcMain.handle('project:open-in-vscode', async (_event, projectId: string) => {

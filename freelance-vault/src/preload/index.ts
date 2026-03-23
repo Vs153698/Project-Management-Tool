@@ -102,6 +102,7 @@ export interface ElectronAPI {
     url: string
     folderName: string
   }) => Promise<{ success: boolean; path?: string; error?: string }>
+  gitPull: (payload: { projectId: string; folderName: string }) => Promise<{ success: boolean; output?: string; error?: string }>
 
   // Open in editor
   openInVscode: (projectId: string) => Promise<{ success: boolean; error?: string }>
@@ -142,6 +143,7 @@ const api: ElectronAPI = {
   codeDeleteFolder: (payload) => ipcRenderer.invoke('code:delete-folder', payload),
 
   gitClone: (payload) => ipcRenderer.invoke('git:clone', payload),
+  gitPull: (payload) => ipcRenderer.invoke('git:pull', payload),
   openInVscode: (projectId) => ipcRenderer.invoke('project:open-in-vscode', projectId),
   openInAntigravity: (projectId) => ipcRenderer.invoke('project:open-in-antigravity', projectId),
 }

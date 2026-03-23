@@ -1150,6 +1150,7 @@ export default defineConfig({
                 name: item,
                 path: fullPath,
                 size: getDirSizeSync(fullPath),
+                isGitRepo: fs.existsSync(path.join(fullPath, ".git")),
                 createdAt: stat.birthtime.toISOString(),
                 modifiedAt: stat.mtime.toISOString()
               });
@@ -1199,6 +1200,25 @@ export default defineConfig({
       }
     }
   );
+  electron.ipcMain.handle("git:pull", async (_event, payload) => {
+    try {
+      const rootFolder = store.get("rootFolder");
+      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
+      };
+      const { stdout } = await execAsync("git pull", {
+        cwd: folderPath,
+        env,
+        timeout: 6e4,
+        shell: "/bin/zsh"
+      });
+      return { success: true, output: stdout.trim() };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
   electron.ipcMain.handle("project:open-in-vscode", async (_event, projectId) => {
     try {
       const rootFolder = store.get("rootFolder");

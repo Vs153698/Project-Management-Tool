@@ -26,6 +26,7 @@ const api = {
   codeListFolders: (projectId) => electron.ipcRenderer.invoke("code:list-folders", projectId),
   codeDeleteFolder: (payload) => electron.ipcRenderer.invoke("code:delete-folder", payload),
   gitClone: (payload) => electron.ipcRenderer.invoke("git:clone", payload),
+  gitPull: (payload) => electron.ipcRenderer.invoke("git:pull", payload),
   openInVscode: (projectId) => electron.ipcRenderer.invoke("project:open-in-vscode", projectId),
   openInAntigravity: (projectId) => electron.ipcRenderer.invoke("project:open-in-antigravity", projectId)
 };

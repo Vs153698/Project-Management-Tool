@@ -18,7 +18,8 @@ import {
   Github,
   X,
   Check,
-  AlertCircle
+  AlertCircle,
+  GitPullRequest
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { FileInfo } from '../../types'
@@ -282,6 +283,7 @@ interface CodeFolder {
   name: string
   path: string
   size?: number
+  isGitRepo?: boolean
   createdAt: string
   modifiedAt: string
 }
@@ -297,6 +299,8 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
   const [folders, setFolders] = useState<CodeFolder[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [pulling, setPulling] = useState<string | null>(null)
+  const [pullResult, setPullResult] = useState<{ folder: string; ok: boolean; msg: string } | null>(null)
 
   // Clone repo state
   const [showClone, setShowClone] = useState(false)
@@ -322,6 +326,19 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
     if (!pendingDelete) return
     await window.electron.codeDeleteFolder({ projectId, folderName: pendingDelete })
     setFolders((prev) => prev.filter((f) => f.name !== pendingDelete))
+  }
+
+  const handlePull = async (folderName: string) => {
+    setPulling(folderName)
+    setPullResult(null)
+    const result = await window.electron.gitPull({ projectId, folderName })
+    setPulling(null)
+    const msg = result.success
+      ? (result.output || 'Already up to date.')
+      : (result.error?.split('\n')[0] || 'Pull failed')
+    setPullResult({ folder: folderName, ok: result.success, msg })
+    // auto-clear after 4s
+    setTimeout(() => setPullResult((r) => r?.folder === folderName ? null : r), 4000)
   }
 
   const handleCloneUrlChange = (url: string) => {
@@ -544,6 +561,25 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
                   </div>
 
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {folder.isGitRepo && (
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handlePull(folder.name)}
+                        disabled={pulling === folder.name}
+                        title="Pull latest from remote"
+                        className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-primary/10 transition-all disabled:opacity-40"
+                      >
+                        {pulling === folder.name ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            className="w-3.5 h-3.5 rounded-full border-2 border-primary border-t-transparent"
+                          />
+                        ) : (
+                          <GitPullRequest size={14} />
+                        )}
+                      </motion.button>
+                    )}
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => window.electron.folderOpen(folder.path)}
@@ -583,9 +619,27 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
           </div>
         )}
       </div>
+      <AnimatePresence>
+        {pullResult && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className={`mt-2 flex items-start gap-2 px-3 py-2 rounded-xl border text-xs ${
+              pullResult.ok
+                ? 'bg-success/5 border-success/20 text-success'
+                : 'bg-danger/5 border-danger/20 text-danger'
+            }`}
+          >
+            {pullResult.ok ? <Check size={13} className="shrink-0 mt-0.5" /> : <AlertCircle size={13} className="shrink-0 mt-0.5" />}
+            <span className="font-mono break-all">{pullResult.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <p className="text-text-muted text-xs mt-2">
         {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
-        {folders.length > 0 && ` · ${formatSize(folders.reduce((s, f) => s + f.size, 0))} total`}
+        {folders.length > 0 && ` · ${formatSize(folders.reduce((s, f) => s + (f.size ?? 0), 0))} total`}
         {' · Stored in your project directory'}
       </p>
 

@@ -15,7 +15,9 @@ import {
   MessageCircle,
   ChevronDown,
   AlertCircle,
-  Banknote
+  Banknote,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import type { BankDetail } from '../../types'
@@ -146,7 +148,7 @@ function generateBankCard(detail: BankDetail, userName: string): string {
   brandGrad.addColorStop(0, '#c4b5fd')
   brandGrad.addColorStop(1, '#67e8f9')
   ctx.fillStyle = brandGrad
-  ctx.fillText('FreelanceVault', iconX + iconSize + 12, iconY + 17)
+  ctx.fillText('DevVault', iconX + iconSize + 12, iconY + 17)
 
   ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif'
   ctx.fillStyle = '#6b7280'
@@ -194,7 +196,10 @@ function generateBankCard(detail: BankDetail, userName: string): string {
 
   // Row 1: Bank | Account Number
   drawField(ctx, 'Bank', detail.bankName, col1, rowY, 270)
-  drawField(ctx, 'Account Number', maskAccountNumber(detail.accountNumber), col2, rowY, 270)
+  // Show full account number on shared image – recipient needs it to transfer funds
+  const rawNum = detail.accountNumber.replace(/\s/g, '')
+  const formattedNum = rawNum.replace(/.{4}(?=.)/g, '$&  ')
+  drawField(ctx, 'Account Number', formattedNum, col2, rowY, 270)
   drawField(ctx, 'Account Type', detail.accountType.charAt(0).toUpperCase() + detail.accountType.slice(1), col3, rowY, 220)
 
   rowY += 80
@@ -251,7 +256,7 @@ function generateBankCard(detail: BankDetail, userName: string): string {
   ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif'
   ctx.fillStyle = '#374151'
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  ctx.fillText(`Shared via FreelanceVault  ·  ${userName}  ·  ${dateStr}`, 64, footY)
+  ctx.fillText(`Shared via DevVault  ·  ${userName}  ·  ${dateStr}`, 64, footY)
 
   // Default star
   if (detail.isDefault) {
@@ -659,6 +664,7 @@ interface AccountCardProps {
 
 function AccountCard({ detail, onEdit, onDelete, onShare }: AccountCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showAccNum, setShowAccNum] = useState(false)
 
   return (
     <motion.div
@@ -688,12 +694,21 @@ function AccountCard({ detail, onEdit, onDelete, onShare }: AccountCardProps) {
           </div>
           <p className="text-text-muted text-sm">{detail.label}</p>
 
-          {/* Account number masked */}
+          {/* Account number with reveal toggle */}
           <div className="flex items-center gap-2 mt-2">
             <CreditCard size={13} className="text-text-muted" />
             <span className="font-mono text-sm text-text-muted">
-              •••• •••• {detail.accountNumber.replace(/\s/g, '').slice(-4)}
+              {showAccNum
+                ? detail.accountNumber.replace(/\s/g, '').replace(/.{4}(?=.)/g, '$& ')
+                : `•••• •••• ${detail.accountNumber.replace(/\s/g, '').slice(-4)}`}
             </span>
+            <button
+              onClick={() => setShowAccNum((v) => !v)}
+              className="p-0.5 rounded text-text-muted hover:text-text transition-colors"
+              title={showAccNum ? 'Hide account number' : 'Show account number'}
+            >
+              {showAccNum ? <EyeOff size={11} /> : <Eye size={11} />}
+            </button>
             <span className="badge text-[10px]">{detail.accountType}</span>
           </div>
 

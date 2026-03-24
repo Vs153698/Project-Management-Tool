@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronLeft,
@@ -12,9 +12,9 @@ import {
   Clock,
   AlertTriangle,
   Code2,
-  Zap,
   Github
 } from 'lucide-react'
+import { useEditors } from '../../hooks/useEditors'
 import { format, isPast, parseISO } from 'date-fns'
 import { useAppStore } from '../../store/useAppStore'
 import CreateProjectModal from './CreateProjectModal'
@@ -26,6 +26,7 @@ import TimeTracker from '../time/TimeTracker'
 import EnvManager from '../env/EnvManager'
 import ScriptRunner from '../scripts/ScriptRunner'
 import InvoiceGenerator from '../invoice/InvoiceGenerator'
+import LinkedInGenerator from '../ai/LinkedInGenerator'
 
 const statusColors: Record<string, string> = {
   not_started: 'text-text-muted bg-text-muted/10 border-text-muted/20',
@@ -75,7 +76,7 @@ function InfoItem({ icon: Icon, label, value, valueClass }: InfoItemProps) {
 
 export default function ProjectDetail({ projectId }: { projectId: string }): JSX.Element {
   const { db, setView, deleteProject, displayCurrency } = useAppStore()
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin'>('overview')
   const [showEdit, setShowEdit] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -118,15 +119,18 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
     window.electron.folderOpen(folderPath)
   }
 
-  const openInVscode = () => window.electron.openInVscode(project.id)
-  const openInAntigravity = () => window.electron.openInAntigravity(project.id)
+  const { editors, openInEditor } = useEditors()
+  const [projectFolderPath, setProjectFolderPath] = useState('')
+  useEffect(() => {
+    window.electron.codeGetProjectFolderPath(project.id).then(setProjectFolderPath).catch(() => {})
+  }, [project.id])
 
   const pct =
     project.projectCost > 0 ? Math.min(100, (totalPaid / project.projectCost) * 100) : 0
 
   const isPersonal = project.projectType === 'personal'
 
-  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice'
+  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin'
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: 'Overview' },
     ...(!isPersonal ? [{ key: 'payments' as TabKey, label: 'Payments' }] : []),
@@ -136,6 +140,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
     { key: 'env', label: '.env' },
     { key: 'scripts', label: 'Scripts' },
     ...(!isPersonal ? [{ key: 'invoice' as TabKey, label: 'Invoice' }] : []),
+    { key: 'linkedin', label: 'LinkedIn' },
   ]
 
   return (
@@ -182,22 +187,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
               <FolderOpen size={14} />
               Open Folder
             </button>
-            <button
-              onClick={openInVscode}
-              title="Open project folder in VS Code"
-              className="btn-secondary text-sm py-1.5 px-3"
-            >
-              <Code2 size={14} />
-              VS Code
-            </button>
-            <button
-              onClick={openInAntigravity}
-              title="Open project folder in Antigravity"
-              className="btn-secondary text-sm py-1.5 px-3"
-            >
-              <Zap size={14} />
-              Antigravity
-            </button>
+            {editors.map((ed) => (
+              <button
+                key={ed.appName}
+                onClick={() => projectFolderPath && openInEditor(projectFolderPath, ed)}
+                title={`Open in ${ed.name}`}
+                className="btn-secondary text-sm py-1.5 px-3"
+              >
+                <Code2 size={14} />
+                {ed.name}
+              </button>
+            ))}
             <button
               onClick={() => setShowEdit(true)}
               className="btn-secondary text-sm py-1.5 px-3"
@@ -388,6 +388,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
             {activeTab === 'invoice' && !isPersonal && (
               <div className="p-6">
                 <InvoiceGenerator project={project} />
+              </div>
+            )}
+
+            {activeTab === 'linkedin' && (
+              <div className="p-6">
+                <LinkedInGenerator projectId={project.id} />
               </div>
             )}
           </motion.div>

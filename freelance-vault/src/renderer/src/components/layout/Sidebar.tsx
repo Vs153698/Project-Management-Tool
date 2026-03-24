@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote, Shield, Search } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote, Shield, Search, Bot } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import type { AppView } from '../../types'
 import AppLogo from '../ui/AppLogo'
@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { icon: FolderKanban,    label: 'Projects',     view: 'projects'     },
   { icon: BarChart2,       label: 'Analytics',    view: 'analytics'    },
   { icon: Banknote,        label: 'Bank Details', view: 'bank-details' },
+  { icon: Bot,             label: 'AI Manager',   view: 'ai-manager'   },
   { icon: Shield,          label: 'Backup',       view: 'backup'       },
 ]
 
@@ -75,7 +76,7 @@ export default function Sidebar(): JSX.Element {
           <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
             <AppLogo size={20} />
           </div>
-          <span className="font-bold text-white tracking-tight text-sm">FreelanceVault</span>
+          <span className="font-bold text-white tracking-tight text-sm">DevVault</span>
         </div>
       </div>
 

@@ -331,7 +331,7 @@ export default function CodeGeneratorModal({ projectId, onClose, onComplete }: P
                   {selected?.label} ready!
                 </p>
                 <p className="text-text-muted text-sm mt-1">
-                  <span className="font-mono text-accent">{folderName}</span> has been scaffolded with a FreelanceVault branded home page.
+                  <span className="font-mono text-accent">{folderName}</span> has been scaffolded with a DevVault branded home page.
                 </p>
               </div>
               <div className="flex gap-3 mt-2 w-full max-w-xs">

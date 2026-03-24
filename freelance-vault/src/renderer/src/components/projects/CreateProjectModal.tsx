@@ -4,6 +4,7 @@ import { X, Plus, Tag, Code2, SkipForward, Github, Loader2, CheckCircle2, AlertC
 import { useAppStore } from '../../store/useAppStore'
 import type { Project } from '../../types'
 import CodeGeneratorModal from './CodeGeneratorModal'
+import { useEditors } from '../../hooks/useEditors'
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'SGD', 'AED', 'CHF']
 const STATUSES: { value: Project['status']; label: string }[] = [
@@ -37,6 +38,7 @@ type CloneState = 'idle' | 'cloning' | 'done' | 'error'
 
 export default function CreateProjectModal({ onClose, editProject }: Props): JSX.Element {
   const { addProject, updateProject, displayCurrency } = useAppStore()
+  const { editors, openInEditor } = useEditors()
   const [isLoading, setIsLoading] = useState(false)
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
   const [showCodeGen, setShowCodeGen] = useState(false)
@@ -211,22 +213,23 @@ export default function CreateProjectModal({ onClose, editProject }: Props): JSX
                   <p className="text-text-muted text-xs mb-7">Project created and code is ready.</p>
 
                   <div className="space-y-2.5">
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={async () => { await window.electron.openInVscode(createdProjectId); onClose() }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#007ACC] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-                    >
-                      <ExternalLink size={15} />
-                      Open in VS Code
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={async () => { await window.electron.openInAntigravity(createdProjectId); onClose() }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-                    >
-                      <ExternalLink size={15} />
-                      Open in Antigravity
-                    </motion.button>
+                    {editors.map((ed) => (
+                      <motion.button
+                        key={ed.appName}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={async () => {
+                          if (createdProjectId) {
+                            const path = await window.electron.codeGetProjectFolderPath(createdProjectId)
+                            await openInEditor(path, ed)
+                          }
+                          onClose()
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                      >
+                        <ExternalLink size={15} />
+                        Open in {ed.name}
+                      </motion.button>
+                    ))}
                     <button
                       onClick={onClose}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-text-muted hover:text-text hover:bg-surface transition-colors text-sm"

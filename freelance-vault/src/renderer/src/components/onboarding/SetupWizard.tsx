@@ -297,8 +297,8 @@ export default function SetupWizard(): JSX.Element {
                 <div className="flex justify-center mb-4">
                   <AppLogo size={64} />
                 </div>
-                <h1 className="text-2xl font-bold text-gradient mb-1.5">Welcome to FreelanceVault</h1>
-                <p className="text-text-muted text-sm">Your complete project management system — built for freelancers.</p>
+                <h1 className="text-2xl font-bold text-gradient mb-1.5">Welcome to DevVault</h1>
+                <p className="text-text-muted text-sm">Your developer workspace — projects, code, AI tools & more.</p>
               </div>
               <div className="grid grid-cols-2 gap-2.5 mb-6">
                 {features.map(({ icon: Icon, title, desc }) => (
@@ -375,7 +375,7 @@ export default function SetupWizard(): JSX.Element {
             <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               <div className="mb-5">
                 <h2 className="text-xl font-bold text-text mb-1">Choose vault location</h2>
-                <p className="text-text-muted text-sm">FreelanceVault will create a folder here for all your data and project files.</p>
+                <p className="text-text-muted text-sm">DevVault will create a folder here for all your data and project files.</p>
               </div>
 
               <div className="bg-card border border-border rounded-xl p-4 mb-3">
@@ -397,7 +397,7 @@ export default function SetupWizard(): JSX.Element {
 
               <div className="bg-surface border border-border rounded-xl p-3.5 text-xs text-text-muted font-mono space-y-1 mb-4">
                 <p className="font-sans font-medium text-text text-[11px] uppercase tracking-wider mb-1.5">Will be created:</p>
-                <p>📁 {rootFolder}/FreelanceVault/</p>
+                <p>📁 {rootFolder}/DevVault/</p>
                 <p className="pl-5">📁 data/ &nbsp;&nbsp;&nbsp; ← database</p>
                 <p className="pl-5">📁 projects/ ← your project files</p>
               </div>
@@ -437,7 +437,7 @@ export default function SetupWizard(): JSX.Element {
                   ))}
                 </div>
               ) : step === 3 ? (
-                <><Check size={15} />Launch FreelanceVault</>
+                <><Check size={15} />Launch DevVault</>
               ) : step === 0 ? (
                 <>Get Started<ChevronRight size={15} /></>
               ) : (

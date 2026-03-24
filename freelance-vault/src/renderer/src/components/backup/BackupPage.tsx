@@ -170,7 +170,7 @@ export default function BackupPage(): JSX.Element {
           <ul className="text-text-muted text-xs space-y-1.5 pl-4 list-disc">
             <li>Your entire database (projects, payments, credentials, env vars, time entries) is encrypted.</li>
             <li>Encryption uses AES-256-GCM with a key derived from your PIN via scrypt.</li>
-            <li>The .fvb file is fully portable — restore on any machine running FreelanceVault.</li>
+            <li>The .fvb file is fully portable — restore on any machine running DevVault.</li>
             <li>Without the correct PIN, the backup cannot be decrypted.</li>
           </ul>
         </div>

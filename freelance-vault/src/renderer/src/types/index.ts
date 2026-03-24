@@ -58,6 +58,14 @@ export interface EnvVar {
   key: string
   value: string
   group?: string
+  environment?: string
+  createdAt: string
+}
+
+export interface EnvProfile {
+  id: string
+  projectId: string
+  name: string
   createdAt: string
 }
 
@@ -67,9 +75,42 @@ export interface Database {
   credentials: Credential[]
   timeEntries: TimeEntry[]
   envVars: EnvVar[]
+  envProfiles?: EnvProfile[]
+  savedLinkedInPosts?: SavedLinkedInPost[]
 }
 
-export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup'
+export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager'
+
+export type AIProvider = 'openai' | 'gemini' | 'deepseek'
+
+export interface AIConfig {
+  selectedProvider: AIProvider
+  openaiKey: string
+  geminiKey: string
+  deepseekKey: string
+}
+
+export interface InterviewQA {
+  question: string
+  answer: string
+}
+
+export interface LinkedInPost {
+  title: string
+  description: string
+  technologies: string[]
+  interviewQuestions: InterviewQA[]
+}
+
+export interface SavedLinkedInPost {
+  id: string
+  projectId: string
+  title: string
+  description: string
+  technologies: string[]
+  interviewQuestions: InterviewQA[]
+  generatedAt: string
+}
 
 export interface BankDetail {
   id: string

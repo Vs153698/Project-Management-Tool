@@ -13,7 +13,6 @@ import {
   FolderOpen,
   RefreshCw,
   Code2,
-  Zap,
   Folder,
   Github,
   X,
@@ -21,6 +20,7 @@ import {
   AlertCircle,
   GitPullRequest
 } from 'lucide-react'
+import { useEditors } from '../../hooks/useEditors'
 import { format, parseISO } from 'date-fns'
 import type { FileInfo } from '../../types'
 import CodeGeneratorModal from '../projects/CodeGeneratorModal'
@@ -265,7 +265,7 @@ function FileSection({ title, category, projectId, description }: FileSectionPro
       <p className="text-text-muted text-xs mt-2">
         {files.length} {files.length === 1 ? 'file' : 'files'}
         {files.length > 0 && ` · ${formatSize(files.reduce((s, f) => s + f.size, 0))} total`}
-        {' · Stored in your FreelanceVault folder'}
+        {' · Stored in your DevVault folder'}
       </p>
 
       <ConfirmDeleteModal
@@ -302,6 +302,7 @@ interface CodeFoldersSectionProps {
 type CloneStatus = 'idle' | 'cloning' | 'done' | 'error'
 
 function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps): JSX.Element {
+  const { editors, openInEditor } = useEditors()
   const [folders, setFolders] = useState<CodeFolder[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
@@ -643,22 +644,17 @@ function CodeFoldersSection({ projectId, onGenerate }: CodeFoldersSectionProps):
                     >
                       <FolderOpen size={14} />
                     </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => window.electron.openInVscode(projectId)}
-                      title="Open in VS Code"
-                      className="p-1.5 rounded-lg text-text-muted hover:text-[#007ACC] hover:bg-[#007ACC]/10 transition-all"
-                    >
-                      <Code2 size={14} />
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => window.electron.openInAntigravity(projectId)}
-                      title="Open in Antigravity"
-                      className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all"
-                    >
-                      <Zap size={14} />
-                    </motion.button>
+                    {editors.map((ed) => (
+                      <motion.button
+                        key={ed.appName}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => openInEditor(folder.path, ed)}
+                        title={`Open in ${ed.name}`}
+                        className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all"
+                      >
+                        <Code2 size={14} />
+                      </motion.button>
+                    ))}
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => setPendingDelete(folder.name)}

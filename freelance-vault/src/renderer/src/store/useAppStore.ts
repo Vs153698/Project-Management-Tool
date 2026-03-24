@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { User, Project, Payment, Credential, Database, AppView, BankDetail, TimeEntry, EnvVar } from '../types'
+import type { User, Project, Payment, Credential, Database, AppView, BankDetail, TimeEntry, EnvVar, EnvProfile, SavedLinkedInPost } from '../types'
 
 interface AppStore {
   user: User | null
@@ -43,6 +43,12 @@ interface AppStore {
   addEnvVar: (envVar: EnvVar) => Promise<void>
   updateEnvVar: (id: string, updates: Partial<EnvVar>) => Promise<void>
   deleteEnvVar: (id: string) => Promise<void>
+
+  addEnvProfile: (profile: EnvProfile) => Promise<void>
+  deleteEnvProfile: (id: string) => Promise<void>
+
+  saveLinkedInPost: (post: SavedLinkedInPost) => Promise<void>
+  deleteLinkedInPost: (id: string) => Promise<void>
 
   bankDetails: BankDetail[]
   loadBankDetails: () => Promise<void>
@@ -176,7 +182,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       payments: db.payments.filter((p) => p.projectId !== id),
       credentials: db.credentials.filter((c) => c.projectId !== id),
       timeEntries: (db.timeEntries || []).filter((t) => t.projectId !== id),
-      envVars: (db.envVars || []).filter((e) => e.projectId !== id)
+      envVars: (db.envVars || []).filter((e) => e.projectId !== id),
+      envProfiles: (db.envProfiles || []).filter((e) => e.projectId !== id),
+      savedLinkedInPosts: (db.savedLinkedInPosts || []).filter((p) => p.projectId !== id)
     })
   },
 
@@ -234,6 +242,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteEnvVar: async (id: string) => {
     const { db, saveDb } = get()
     await saveDb({ ...db, envVars: (db.envVars || []).filter((e) => e.id !== id) })
+  },
+
+  addEnvProfile: async (profile: EnvProfile) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, envProfiles: [...(db.envProfiles || []), profile] })
+  },
+
+  deleteEnvProfile: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, envProfiles: (db.envProfiles || []).filter((p) => p.id !== id) })
+  },
+
+  saveLinkedInPost: async (post: SavedLinkedInPost) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, savedLinkedInPosts: [...(db.savedLinkedInPosts || []), post] })
+  },
+
+  deleteLinkedInPost: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, savedLinkedInPosts: (db.savedLinkedInPosts || []).filter((p) => p.id !== id) })
   },
 
   loadBankDetails: async () => {

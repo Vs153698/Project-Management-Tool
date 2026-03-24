@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, Square, Terminal, RefreshCw, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react'
+import { Play, Square, Terminal, RefreshCw, ChevronDown, ChevronUp, FolderOpen, Code2 } from 'lucide-react'
+import { useEditors } from '../../hooks/useEditors'
 
 interface ScriptInfo {
   name: string
@@ -17,6 +18,7 @@ interface OutputLine {
 }
 
 export default function ScriptRunner({ projectId }: { projectId: string }): JSX.Element {
+  const { editors, openInEditor } = useEditors()
   const [folders, setFolders] = useState<CodeFolder[]>([])
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [scripts, setScripts] = useState<ScriptInfo[]>([])
@@ -125,25 +127,60 @@ export default function ScriptRunner({ projectId }: { projectId: string }): JSX.
       </div>
 
       {/* Folder selector */}
-      {folders.length > 1 && (
-        <div>
-          <label className="label">Code Folder</label>
-          <div className="flex gap-2 flex-wrap">
-            {folders.map((f) => (
+      {folders.length > 0 && (
+        <div className="space-y-2">
+          {folders.length > 1 && (
+            <>
+              <label className="label">Code Folder</label>
+              <div className="flex gap-2 flex-wrap">
+                {folders.map((f) => (
+                  <button
+                    key={f.name}
+                    onClick={() => setSelectedFolder(f.name)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                      selectedFolder === f.name
+                        ? 'bg-success/15 text-success border-success/30'
+                        : 'bg-surface text-text-muted border-border hover:border-border/60'
+                    }`}
+                  >
+                    <FolderOpen size={13} className="inline mr-1.5 -mt-0.5" />
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Open selected folder shortcuts */}
+          {selectedFolder && (
+            <div className="flex gap-2 flex-wrap">
               <button
-                key={f.name}
-                onClick={() => setSelectedFolder(f.name)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  selectedFolder === f.name
-                    ? 'bg-success/15 text-success border-success/30'
-                    : 'bg-surface text-text-muted border-border hover:border-border/60'
-                }`}
+                onClick={async () => {
+                  const path = await window.electron.codeGetFolderPath({ projectId, folderName: selectedFolder })
+                  window.electron.folderOpen(path)
+                }}
+                className="btn-secondary text-xs py-1 px-2.5"
+                title="Open code folder in Finder"
               >
-                <FolderOpen size={13} className="inline mr-1.5 -mt-0.5" />
-                {f.name}
+                <FolderOpen size={12} />
+                Open in Finder
               </button>
-            ))}
-          </div>
+              {editors.map((ed) => (
+                <button
+                  key={ed.appName}
+                  onClick={async () => {
+                    const path = await window.electron.codeGetFolderPath({ projectId, folderName: selectedFolder })
+                    openInEditor(path, ed)
+                  }}
+                  className="btn-secondary text-xs py-1 px-2.5"
+                  title={`Open in ${ed.name}`}
+                >
+                  <Code2 size={12} />
+                  {ed.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -7,6 +7,7 @@ import ProjectDetail from '../projects/ProjectDetail'
 import Analytics from '../analytics/Analytics'
 import BankDetailsPage from '../banking/BankDetailsPage'
 import BackupPage from '../backup/BackupPage'
+import AIManager from '../ai/AIManager'
 import QuickSwitcher from '../ui/QuickSwitcher'
 
 const pageVariants = {
@@ -30,6 +31,8 @@ export default function AppLayout(): JSX.Element {
         return <Analytics />
       case 'bank-details':
         return <BankDetailsPage />
+      case 'ai-manager':
+        return <AIManager />
       case 'backup':
         return <BackupPage />
       default:

@@ -265,7 +265,7 @@ export default function LoginScreen(): JSX.Element {
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gradient mb-1">FreelanceVault</h1>
+          <h1 className="text-2xl font-bold text-gradient mb-1">DevVault</h1>
           <p className="text-text-muted text-sm">
             {greeting}, <span className="text-text font-medium">{displayName}</span>
           </p>

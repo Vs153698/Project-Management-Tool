@@ -114,7 +114,7 @@ function hashPin(pin) {
 }
 function getDbPath() {
   const rootFolder = store.get("rootFolder");
-  return path.join(rootFolder, "FreelanceVault", "data", "db.json");
+  return path.join(rootFolder, "DevVault", "data", "db.json");
 }
 function readDb() {
   const dbPath = getDbPath();
@@ -134,7 +134,7 @@ function writeDb(data) {
   fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf-8");
 }
 function createProjectFolders(rootFolder, projectId) {
-  const base = path.join(rootFolder, "FreelanceVault", "projects", projectId);
+  const base = path.join(rootFolder, "DevVault", "projects", projectId);
   fs.mkdirSync(path.join(base, "files"), { recursive: true });
   fs.mkdirSync(path.join(base, "docs"), { recursive: true });
   fs.mkdirSync(path.join(base, "credentials"), { recursive: true });
@@ -222,7 +222,7 @@ function getViteHomePage(name) {
     "          </svg>",
     "        </div>",
     "        <div style={{ backgroundImage: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '3rem', fontWeight: 900, letterSpacing: '-2px', marginBottom: 8 }}>",
-    "          FreelanceVault",
+    "          DevVault",
     "        </div>",
     `        <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: 40 }}>${name}</p>`,
     "        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 40 }}>",
@@ -261,7 +261,7 @@ function getNextJsHomePage(name) {
     "          </svg>",
     "        </div>",
     "        <div style={{ backgroundImage: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '3rem', fontWeight: 900, letterSpacing: '-2px', marginBottom: 8 }}>",
-    "          FreelanceVault",
+    "          DevVault",
     "        </div>",
     `        <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: 40 }}>${name}</p>`,
     "        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 40 }}>",
@@ -346,7 +346,7 @@ function writeNodeBackendFiles(dir, name) {
     "app.use('/api', router)",
     "",
     "app.listen(PORT, () => {",
-    "  console.log(`FreelanceVault · ${'" + name + "'} running on http://localhost:${PORT}`)",
+    "  console.log(`DevVault · ${'" + name + "'} running on http://localhost:${PORT}`)",
     "})"
   ].join("\n");
   const routesTs = [
@@ -380,7 +380,7 @@ function writePythonBackendFiles(dir, name) {
     "",
     "app = FastAPI(",
     `    title='${name}',`,
-    "    description='FreelanceVault — FastAPI Backend',",
+    "    description='DevVault — FastAPI Backend',",
     "    version='1.0.0'",
     ")",
     "",
@@ -515,7 +515,7 @@ function writeAgentAIFiles(dir, name) {
     "",
     "export async function runAgent(userMessage: string): Promise<string> {",
     "  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [",
-    "    { role: 'system', content: 'You are a helpful AI assistant built with FreelanceVault.' },",
+    "    { role: 'system', content: 'You are a helpful AI assistant built with DevVault.' },",
     "    { role: 'user', content: userMessage },",
     "  ]",
     "",
@@ -549,7 +549,7 @@ function writeAgentAIFiles(dir, name) {
     "import { runAgent } from './agent.js'",
     "",
     "const question = process.argv[2] ?? 'What time is it right now, and what is 42 * 7?'",
-    "console.log('FreelanceVault AI Agent')",
+    "console.log('DevVault AI Agent')",
     "console.log('─'.repeat(40))",
     "console.log('Query:', question)",
     "console.log()",
@@ -711,7 +711,7 @@ function writeAgentOrchestrationFiles(dir, name) {
     "",
     "const topic = process.argv[2] ?? 'The future of AI-assisted freelance development'",
     "",
-    "console.log('FreelanceVault · Agent Orchestration')",
+    "console.log('DevVault · Agent Orchestration')",
     "console.log('Topic:', topic)",
     "console.log('─'.repeat(50))",
     "",
@@ -796,7 +796,7 @@ electron.app.whenReady().then(() => {
   electron.ipcMain.handle("app:select-folder", async () => {
     const result = await electron.dialog.showOpenDialog({
       properties: ["openDirectory", "createDirectory"],
-      title: "Choose FreelanceVault Location"
+      title: "Choose DevVault Location"
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
@@ -805,7 +805,7 @@ electron.app.whenReady().then(() => {
     "app:setup-complete",
     (_event, payload) => {
       try {
-        const vaultRoot = path.join(payload.rootFolder, "FreelanceVault");
+        const vaultRoot = path.join(payload.rootFolder, "DevVault");
         fs.mkdirSync(path.join(vaultRoot, "data"), { recursive: true });
         fs.mkdirSync(path.join(vaultRoot, "projects"), { recursive: true });
         const dbPath = path.join(vaultRoot, "data", "db.json");
@@ -840,7 +840,7 @@ electron.app.whenReady().then(() => {
       if (!electron.systemPreferences.canPromptTouchID()) {
         return { success: false, error: "Touch ID not available" };
       }
-      await electron.systemPreferences.promptTouchID("to access FreelanceVault");
+      await electron.systemPreferences.promptTouchID("to access DevVault");
       return { success: true, user: { name: store.get("userName") } };
     } catch (err) {
       return { success: false, error: String(err) };
@@ -878,7 +878,7 @@ electron.app.whenReady().then(() => {
         });
         if (result.canceled || result.filePaths.length === 0) return { success: false, files: [] };
         const rootFolder = store.get("rootFolder");
-        const destDir = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.category);
+        const destDir = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.category);
         fs.mkdirSync(destDir, { recursive: true });
         const uploaded = [];
         for (const filePath of result.filePaths) {
@@ -904,7 +904,7 @@ electron.app.whenReady().then(() => {
         });
         if (result.canceled || result.filePaths.length === 0) return { success: false, files: [], folderName: "" };
         const rootFolder = store.get("rootFolder");
-        const destDir = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.category);
+        const destDir = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.category);
         fs.mkdirSync(destDir, { recursive: true });
         const srcFolder = result.filePaths[0];
         const parts = srcFolder.split(/[/\\]/);
@@ -922,7 +922,7 @@ electron.app.whenReady().then(() => {
     (_event, payload) => {
       try {
         const rootFolder = store.get("rootFolder");
-        const dir = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.category);
+        const dir = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.category);
         const files = listFilesRecursive(dir, dir);
         return { success: true, files };
       } catch (err) {
@@ -941,7 +941,7 @@ electron.app.whenReady().then(() => {
         const rootFolder = store.get("rootFolder");
         const filePath = path.join(
           rootFolder,
-          "FreelanceVault",
+          "DevVault",
           "projects",
           payload.projectId,
           payload.category,
@@ -969,7 +969,7 @@ electron.app.whenReady().then(() => {
   });
   electron.ipcMain.handle("project:get-folder", (_event, projectId) => {
     const rootFolder = store.get("rootFolder");
-    return path.join(rootFolder, "FreelanceVault", "projects", projectId);
+    return path.join(rootFolder, "DevVault", "projects", projectId);
   });
   electron.ipcMain.handle("bank:get", () => {
     try {
@@ -1018,7 +1018,7 @@ electron.app.whenReady().then(() => {
     async (_event, payload) => {
       try {
         const rootFolder = store.get("rootFolder");
-        const projectFolder = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId);
+        const projectFolder = path.join(rootFolder, "DevVault", "projects", payload.projectId);
         const targetDir = path.join(projectFolder, payload.folderName);
         if (fs.existsSync(targetDir)) {
           return { success: false, error: `Folder "${payload.folderName}" already exists in this project` };
@@ -1178,7 +1178,7 @@ export default defineConfig({
   electron.ipcMain.handle("code:list-folders", (_event, projectId) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const projectFolder = path.join(rootFolder, "FreelanceVault", "projects", projectId);
+      const projectFolder = path.join(rootFolder, "DevVault", "projects", projectId);
       const excluded = /* @__PURE__ */ new Set(["files", "docs", "credentials"]);
       const folders = [];
       if (fs.existsSync(projectFolder)) {
@@ -1219,7 +1219,7 @@ export default defineConfig({
     (_event, payload) => {
       try {
         const rootFolder = store.get("rootFolder");
-        const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+        const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
         if (fs.existsSync(folderPath)) fs.rmSync(folderPath, { recursive: true, force: true });
         return { success: true };
       } catch (err) {
@@ -1234,7 +1234,7 @@ export default defineConfig({
         const rootFolder = store.get("rootFolder");
         const depPath = path.join(
           rootFolder,
-          "FreelanceVault",
+          "DevVault",
           "projects",
           payload.projectId,
           payload.folderName,
@@ -1252,7 +1252,7 @@ export default defineConfig({
     async (_event, payload) => {
       try {
         const rootFolder = store.get("rootFolder");
-        const projectFolder = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId);
+        const projectFolder = path.join(rootFolder, "DevVault", "projects", payload.projectId);
         const env = {
           ...process.env,
           PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
@@ -1273,7 +1273,7 @@ export default defineConfig({
   electron.ipcMain.handle("git:pull", async (_event, payload) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
@@ -1289,10 +1289,14 @@ export default defineConfig({
       return { success: false, error: String(err) };
     }
   });
+  electron.ipcMain.handle("project:get-folder-path", (_event, projectId) => {
+    const rootFolder = store.get("rootFolder");
+    return path.join(rootFolder, "DevVault", "projects", projectId);
+  });
   electron.ipcMain.handle("project:open-in-vscode", async (_event, projectId) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const projectFolder = path.join(rootFolder, "FreelanceVault", "projects", projectId);
+      const projectFolder = path.join(rootFolder, "DevVault", "projects", projectId);
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
@@ -1306,16 +1310,95 @@ export default defineConfig({
   electron.ipcMain.handle("project:open-in-antigravity", async (_event, projectId) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const projectFolder = path.join(rootFolder, "FreelanceVault", "projects", projectId);
+      const projectFolder = path.join(rootFolder, "DevVault", "projects", projectId);
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
       };
-      await execAsync(`antigravity "${projectFolder}"`, { env, shell: "/bin/zsh" });
+      try {
+        await execAsync(`antigravity "${projectFolder}"`, { env, shell: "/bin/zsh" });
+      } catch {
+        await execAsync(`open -a "Antigravity" "${projectFolder}"`, { env, shell: "/bin/zsh" });
+      }
       return { success: true };
     } catch (err) {
       return { success: false, error: String(err) };
     }
+  });
+  electron.ipcMain.handle("code:open-in-vscode", async (_event, payload) => {
+    try {
+      const rootFolder = store.get("rootFolder");
+      const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
+      };
+      await execAsync(`code "${folderPath}"`, { env, shell: "/bin/zsh" });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("code:open-in-antigravity", async (_event, payload) => {
+    try {
+      const rootFolder = store.get("rootFolder");
+      const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
+      };
+      try {
+        await execAsync(`antigravity "${folderPath}"`, { env, shell: "/bin/zsh" });
+      } catch {
+        await execAsync(`open -a "Antigravity" "${folderPath}"`, { env, shell: "/bin/zsh" });
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("editors:detect", async () => {
+    const candidates = [
+      { name: "VS Code", appName: "Visual Studio Code", cli: "code" },
+      { name: "Cursor", appName: "Cursor", cli: "cursor" },
+      { name: "Zed", appName: "Zed", cli: "zed" },
+      { name: "Antigravity", appName: "Antigravity", cli: "antigravity" },
+      { name: "Windsurf", appName: "Windsurf", cli: "windsurf" },
+      { name: "Sublime Text", appName: "Sublime Text", cli: "subl" },
+      { name: "WebStorm", appName: "WebStorm", cli: null },
+      { name: "Nova", appName: "Nova", cli: "nova" }
+    ];
+    const available = [];
+    for (const ed of candidates) {
+      const appPath = `/Applications/${ed.appName}.app`;
+      if (fs.existsSync(appPath)) {
+        available.push({ name: ed.name, appName: ed.appName, cli: ed.cli });
+      }
+    }
+    return available;
+  });
+  electron.ipcMain.handle("editors:open", async (_event, payload) => {
+    try {
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || "/usr/bin:/bin"}`
+      };
+      if (payload.cli) {
+        try {
+          await execAsync(`${payload.cli} "${payload.folderPath}"`, { env, shell: "/bin/zsh" });
+          return { success: true };
+        } catch {
+        }
+      }
+      await execAsync(`open -a "${payload.appName}" "${payload.folderPath}"`, { env, shell: "/bin/zsh" });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("code:get-folder-path", (_event, payload) => {
+    const rootFolder = store.get("rootFolder");
+    return path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
   });
   electron.ipcMain.handle("backup:export", async (_event, pin) => {
     try {
@@ -1331,8 +1414,8 @@ export default defineConfig({
       const payload = Buffer.concat([magic, salt, iv, tag, enc]);
       const { filePath } = await electron.dialog.showSaveDialog({
         title: "Save Backup",
-        defaultPath: `freelancevault-backup-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.fvb`,
-        filters: [{ name: "FreelanceVault Backup", extensions: ["fvb"] }]
+        defaultPath: `devvault-backup-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.fvb`,
+        filters: [{ name: "DevVault Backup", extensions: ["fvb"] }]
       });
       if (!filePath) return { success: false, error: "cancelled" };
       fs.writeFileSync(filePath, payload);
@@ -1345,7 +1428,7 @@ export default defineConfig({
     try {
       const { filePaths } = await electron.dialog.showOpenDialog({
         title: "Open Backup",
-        filters: [{ name: "FreelanceVault Backup", extensions: ["fvb"] }],
+        filters: [{ name: "DevVault Backup", extensions: ["fvb"] }],
         properties: ["openFile"]
       });
       if (!filePaths.length) return { success: false, error: "cancelled" };
@@ -1370,7 +1453,7 @@ export default defineConfig({
   electron.ipcMain.handle("script:list", async (_event, payload) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
       const pkgPath = path.join(folderPath, "package.json");
       if (!fs.existsSync(pkgPath)) {
         const hasPyproject = fs.existsSync(path.join(folderPath, "pyproject.toml"));
@@ -1392,7 +1475,7 @@ export default defineConfig({
     "script:run",
     (_event, payload) => {
       const rootFolder = store.get("rootFolder");
-      const folderPath = path.join(rootFolder, "FreelanceVault", "projects", payload.projectId, payload.folderName);
+      const folderPath = path.join(rootFolder, "DevVault", "projects", payload.projectId, payload.folderName);
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:${process.env.PATH || ""}`,
@@ -1427,7 +1510,7 @@ export default defineConfig({
   electron.ipcMain.handle("invoice:generate", async (_event, payload) => {
     try {
       const rootFolder = store.get("rootFolder");
-      const outDir = path.join(rootFolder, "FreelanceVault", "invoices");
+      const outDir = path.join(rootFolder, "DevVault", "invoices");
       fs.mkdirSync(outDir, { recursive: true });
       const outPath = path.join(outDir, payload.filename);
       const win = new electron.BrowserWindow({ show: false, webPreferences: { offscreen: true } });
@@ -1443,6 +1526,120 @@ export default defineConfig({
       if (filePath && filePath !== outPath) fs.copyFileSync(outPath, filePath);
       electron.shell.openPath(filePath || outPath);
       return { success: true, path: filePath || outPath };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("ai:get-config", () => {
+    return store.get("aiConfig") || { selectedProvider: "openai", openaiKey: "", geminiKey: "", deepseekKey: "" };
+  });
+  electron.ipcMain.handle("ai:save-config", (_event, config) => {
+    store.set("aiConfig", config);
+    return { success: true };
+  });
+  electron.ipcMain.handle("ai:generate-linkedin", async (_event, projectId) => {
+    try {
+      let readCodeFiles = function(dir) {
+        if (!fs.existsSync(dir)) return;
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+          if (excluded.has(item) || item.startsWith(".")) continue;
+          const fullPath = path.join(dir, item);
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory()) {
+            readCodeFiles(fullPath);
+          } else {
+            const ext = item.split(".").pop()?.toLowerCase() || "";
+            const codeExts = /* @__PURE__ */ new Set(["ts", "tsx", "js", "jsx", "py", "go", "rs", "java", "cs", "cpp", "c", "swift", "kt", "rb", "php", "vue", "svelte", "json", "yaml", "yml", "toml", "md"]);
+            if (!codeExts.has(ext)) continue;
+            if (stat.size > 5e4) continue;
+            if (codeContext.length >= MAX_CHARS) continue;
+            try {
+              const content = fs.readFileSync(fullPath, "utf-8");
+              const relPath = fullPath.replace(projectFolder + "/", "");
+              codeContext += `
+
+--- ${relPath} ---
+${content.slice(0, 3e3)}`;
+            } catch {
+            }
+          }
+        }
+      };
+      const aiConfig = store.get("aiConfig") || {};
+      const provider = aiConfig.selectedProvider || "openai";
+      const apiKey = provider === "openai" ? aiConfig.openaiKey : provider === "gemini" ? aiConfig.geminiKey : aiConfig.deepseekKey;
+      if (!apiKey) return { success: false, error: "No API key configured. Go to AI Manager to add your key." };
+      const rootFolder = store.get("rootFolder");
+      const projectFolder = path.join(rootFolder, "DevVault", "projects", projectId);
+      const excluded = /* @__PURE__ */ new Set(["files", "docs", "credentials", "node_modules", ".git", "__pycache__", ".next", "dist", "build", ".venv", "venv"]);
+      let codeContext = "";
+      const MAX_CHARS = 6e4;
+      readCodeFiles(projectFolder);
+      if (!codeContext.trim()) {
+        return { success: false, error: "No code files found in this project. Generate or add code first." };
+      }
+      const prompt = `You are a professional technical writer helping a developer craft their LinkedIn Projects section entry.
+
+Analyze the following project code and generate LinkedIn Projects section content. Be specific about what this project actually does based on the code.
+
+PROJECT CODE:
+${codeContext.slice(0, MAX_CHARS)}
+
+Generate a JSON response with exactly this structure:
+{
+  "title": "A compelling project title (max 80 chars)",
+  "description": "A concise 2-3 sentence description optimized for LinkedIn's Projects section. Describe what the project does, key technical decisions, and impact. Write in third person or as a noun phrase. No hashtags. No emoji. Keep it professional and recruitier-friendly.",
+  "technologies": ["list", "of", "specific", "technologies", "used"],
+  "interviewQuestions": [
+    {
+      "question": "A specific technical interview question a hiring manager might ask about this project's architecture, design decisions, or implementation challenges",
+      "answer": "A strong, detailed model answer (3-5 sentences) that demonstrates technical depth and problem-solving skills. Reference actual patterns or decisions visible in the code."
+    }
+  ]
+}
+
+Generate exactly 5 interview Q&A pairs. Return ONLY valid JSON, no markdown, no explanation.`;
+      let result;
+      if (provider === "gemini") {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+            })
+          }
+        );
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        result = JSON.parse(clean);
+      } else {
+        const baseUrl = provider === "deepseek" ? "https://api.deepseek.com" : "https://api.openai.com/v1";
+        const model = provider === "deepseek" ? "deepseek-chat" : "gpt-4o";
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+            max_tokens: 4096
+          })
+        });
+        const data = await response.json();
+        if (data?.error) return { success: false, error: data.error.message };
+        const text = data?.choices?.[0]?.message?.content || "";
+        const clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        result = JSON.parse(clean);
+      }
+      return { success: true, data: result };
     } catch (err) {
       return { success: false, error: String(err) };
     }

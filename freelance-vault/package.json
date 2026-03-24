@@ -1,7 +1,7 @@
 {
-  "name": "freelance-vault",
+  "name": "devvault",
   "version": "1.0.0",
-  "description": "Professional project management for freelancers",
+  "description": "Developer workspace — projects, payments, credentials & AI tools",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -38,8 +38,8 @@
     "vite": "^5.0.12"
   },
   "build": {
-    "appId": "com.freelancevault.app",
-    "productName": "FreelanceVault",
+    "appId": "com.devvault.app",
+    "productName": "DevVault",
     "mac": {
       "category": "public.app-category.productivity",
       "target": ["dmg", "zip"],

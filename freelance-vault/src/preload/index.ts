@@ -105,9 +105,19 @@ export interface ElectronAPI {
   }) => Promise<{ success: boolean; path?: string; error?: string }>
   gitPull: (payload: { projectId: string; folderName: string }) => Promise<{ success: boolean; output?: string; error?: string }>
 
-  // Open in editor
+  // Open in editor (project root)
   openInVscode: (projectId: string) => Promise<{ success: boolean; error?: string }>
   openInAntigravity: (projectId: string) => Promise<{ success: boolean; error?: string }>
+
+  // Open specific code folder in editor
+  codeOpenInVscode: (payload: { projectId: string; folderName: string }) => Promise<{ success: boolean; error?: string }>
+  codeOpenInAntigravity: (payload: { projectId: string; folderName: string }) => Promise<{ success: boolean; error?: string }>
+  codeGetFolderPath: (payload: { projectId: string; folderName: string }) => Promise<string>
+
+  // Dynamic editor detection & open
+  editorsDetect: () => Promise<{ name: string; appName: string; cli: string | null }[]>
+  editorsOpen: (payload: { folderPath: string; appName: string; cli: string | null }) => Promise<{ success: boolean; error?: string }>
+  codeGetProjectFolderPath: (projectId: string) => Promise<string>
 
   // Backup
   backupExport: (pin: string) => Promise<{ success: boolean; error?: string }>
@@ -131,6 +141,11 @@ export interface ElectronAPI {
 
   // Invoice
   invoiceGenerate: (payload: { html: string; filename: string }) => Promise<{ success: boolean; path?: string; error?: string }>
+
+  // AI
+  aiGetConfig: () => Promise<{ selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }>
+  aiSaveConfig: (config: { selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }) => Promise<{ success: boolean }>
+  aiGenerateLinkedin: (projectId: string) => Promise<{ success: boolean; data?: { title: string; description: string; technologies: string[]; interviewQuestions: { question: string; answer: string }[] }; error?: string }>
 }
 
 const api: ElectronAPI = {
@@ -171,6 +186,13 @@ const api: ElectronAPI = {
   gitPull: (payload) => ipcRenderer.invoke('git:pull', payload),
   openInVscode: (projectId) => ipcRenderer.invoke('project:open-in-vscode', projectId),
   openInAntigravity: (projectId) => ipcRenderer.invoke('project:open-in-antigravity', projectId),
+  codeOpenInVscode: (payload) => ipcRenderer.invoke('code:open-in-vscode', payload),
+  codeOpenInAntigravity: (payload) => ipcRenderer.invoke('code:open-in-antigravity', payload),
+  codeGetFolderPath: (payload) => ipcRenderer.invoke('code:get-folder-path', payload),
+
+  editorsDetect: () => ipcRenderer.invoke('editors:detect'),
+  editorsOpen: (payload) => ipcRenderer.invoke('editors:open', payload),
+  codeGetProjectFolderPath: (projectId) => ipcRenderer.invoke('project:get-folder-path', projectId),
 
   backupExport: (pin) => ipcRenderer.invoke('backup:export', pin),
   backupImport: (pin) => ipcRenderer.invoke('backup:import', pin),
@@ -192,6 +214,10 @@ const api: ElectronAPI = {
   },
 
   invoiceGenerate: (payload) => ipcRenderer.invoke('invoice:generate', payload),
+
+  aiGetConfig: () => ipcRenderer.invoke('ai:get-config'),
+  aiSaveConfig: (config) => ipcRenderer.invoke('ai:save-config', config),
+  aiGenerateLinkedin: (projectId) => ipcRenderer.invoke('ai:generate-linkedin', projectId),
 }
 
 if (process.contextIsolated) {

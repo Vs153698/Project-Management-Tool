@@ -17,6 +17,12 @@ interface StoreSchema {
   pinHash: string
   userName: string
   displayCurrency: string
+  aiConfig: {
+    selectedProvider: string
+    openaiKey: string
+    geminiKey: string
+    deepseekKey: string
+  }
 }
 
 interface Database {
@@ -84,7 +90,7 @@ function hashPin(pin: string): string {
 
 function getDbPath(): string {
   const rootFolder = store.get('rootFolder') as string
-  return join(rootFolder, 'FreelanceVault', 'data', 'db.json')
+  return join(rootFolder, 'DevVault', 'data', 'db.json')
 }
 
 function readDb(): Database {
@@ -108,7 +114,7 @@ function writeDb(data: Database): void {
 }
 
 function createProjectFolders(rootFolder: string, projectId: string): void {
-  const base = join(rootFolder, 'FreelanceVault', 'projects', projectId)
+  const base = join(rootFolder, 'DevVault', 'projects', projectId)
   fs.mkdirSync(join(base, 'files'), { recursive: true })
   fs.mkdirSync(join(base, 'docs'), { recursive: true })
   fs.mkdirSync(join(base, 'credentials'), { recursive: true })
@@ -208,7 +214,7 @@ function getViteHomePage(name: string): string {
     "          </svg>",
     "        </div>",
     "        <div style={{ backgroundImage: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '3rem', fontWeight: 900, letterSpacing: '-2px', marginBottom: 8 }}>",
-    "          FreelanceVault",
+    "          DevVault",
     "        </div>",
     `        <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: 40 }}>${name}</p>`,
     "        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 40 }}>",
@@ -248,7 +254,7 @@ function getNextJsHomePage(name: string): string {
     "          </svg>",
     "        </div>",
     "        <div style={{ backgroundImage: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '3rem', fontWeight: 900, letterSpacing: '-2px', marginBottom: 8 }}>",
-    "          FreelanceVault",
+    "          DevVault",
     "        </div>",
     `        <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: 40 }}>${name}</p>`,
     "        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 40 }}>",
@@ -336,7 +342,7 @@ function writeNodeBackendFiles(dir: string, name: string): void {
     "app.use('/api', router)",
     "",
     "app.listen(PORT, () => {",
-    "  console.log(`FreelanceVault · ${'" + name + "'} running on http://localhost:${PORT}`)",
+    "  console.log(`DevVault · ${'" + name + "'} running on http://localhost:${PORT}`)",
     "})",
   ].join('\n')
 
@@ -375,7 +381,7 @@ function writePythonBackendFiles(dir: string, name: string): void {
     "",
     "app = FastAPI(",
     `    title='${name}',`,
-    "    description='FreelanceVault — FastAPI Backend',",
+    "    description='DevVault — FastAPI Backend',",
     "    version='1.0.0'",
     ")",
     "",
@@ -519,7 +525,7 @@ function writeAgentAIFiles(dir: string, name: string): void {
     "",
     "export async function runAgent(userMessage: string): Promise<string> {",
     "  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [",
-    "    { role: 'system', content: 'You are a helpful AI assistant built with FreelanceVault.' },",
+    "    { role: 'system', content: 'You are a helpful AI assistant built with DevVault.' },",
     "    { role: 'user', content: userMessage },",
     "  ]",
     "",
@@ -554,7 +560,7 @@ function writeAgentAIFiles(dir: string, name: string): void {
     "import { runAgent } from './agent.js'",
     "",
     "const question = process.argv[2] ?? 'What time is it right now, and what is 42 * 7?'",
-    "console.log('FreelanceVault AI Agent')",
+    "console.log('DevVault AI Agent')",
     "console.log('─'.repeat(40))",
     "console.log('Query:', question)",
     "console.log()",
@@ -726,7 +732,7 @@ function writeAgentOrchestrationFiles(dir: string, name: string): void {
     "",
     "const topic = process.argv[2] ?? 'The future of AI-assisted freelance development'",
     "",
-    "console.log('FreelanceVault · Agent Orchestration')",
+    "console.log('DevVault · Agent Orchestration')",
     "console.log('Topic:', topic)",
     "console.log('─'.repeat(50))",
     "",
@@ -829,7 +835,7 @@ app.whenReady().then(() => {
   ipcMain.handle('app:select-folder', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory', 'createDirectory'],
-      title: 'Choose FreelanceVault Location'
+      title: 'Choose DevVault Location'
     })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
@@ -839,7 +845,7 @@ app.whenReady().then(() => {
     'app:setup-complete',
     (_event, payload: { rootFolder: string; name: string; pin: string }) => {
       try {
-        const vaultRoot = join(payload.rootFolder, 'FreelanceVault')
+        const vaultRoot = join(payload.rootFolder, 'DevVault')
         fs.mkdirSync(join(vaultRoot, 'data'), { recursive: true })
         fs.mkdirSync(join(vaultRoot, 'projects'), { recursive: true })
 
@@ -880,7 +886,7 @@ app.whenReady().then(() => {
       if (!systemPreferences.canPromptTouchID()) {
         return { success: false, error: 'Touch ID not available' }
       }
-      await systemPreferences.promptTouchID('to access FreelanceVault')
+      await systemPreferences.promptTouchID('to access DevVault')
       return { success: true, user: { name: store.get('userName') as string } }
     } catch (err) {
       return { success: false, error: String(err) }
@@ -925,7 +931,7 @@ app.whenReady().then(() => {
         if (result.canceled || result.filePaths.length === 0) return { success: false, files: [] }
 
         const rootFolder = store.get('rootFolder') as string
-        const destDir = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.category)
+        const destDir = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.category)
         fs.mkdirSync(destDir, { recursive: true })
 
         const uploaded: string[] = []
@@ -954,7 +960,7 @@ app.whenReady().then(() => {
         if (result.canceled || result.filePaths.length === 0) return { success: false, files: [], folderName: '' }
 
         const rootFolder = store.get('rootFolder') as string
-        const destDir = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.category)
+        const destDir = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.category)
         fs.mkdirSync(destDir, { recursive: true })
 
         const srcFolder = result.filePaths[0]
@@ -975,7 +981,7 @@ app.whenReady().then(() => {
     (_event, payload: { projectId: string; category: 'files' | 'docs' }) => {
       try {
         const rootFolder = store.get('rootFolder') as string
-        const dir = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.category)
+        const dir = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.category)
         const files = listFilesRecursive(dir, dir)
         return { success: true, files }
       } catch (err) {
@@ -995,7 +1001,7 @@ app.whenReady().then(() => {
       try {
         const rootFolder = store.get('rootFolder') as string
         const filePath = join(
-          rootFolder, 'FreelanceVault', 'projects',
+          rootFolder, 'DevVault', 'projects',
           payload.projectId, payload.category, payload.relativePath
         )
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
@@ -1024,7 +1030,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:get-folder', (_event, projectId: string) => {
     const rootFolder = store.get('rootFolder') as string
-    return join(rootFolder, 'FreelanceVault', 'projects', projectId)
+    return join(rootFolder, 'DevVault', 'projects', projectId)
   })
 
   // ─── Bank Details ────────────────────────────────────────────
@@ -1089,7 +1095,7 @@ app.whenReady().then(() => {
     ) => {
       try {
         const rootFolder = store.get('rootFolder') as string
-        const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId)
+        const projectFolder = join(rootFolder, 'DevVault', 'projects', payload.projectId)
         const targetDir = join(projectFolder, payload.folderName)
 
         if (fs.existsSync(targetDir)) {
@@ -1251,7 +1257,7 @@ app.whenReady().then(() => {
   ipcMain.handle('code:list-folders', (_event, projectId: string) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', projectId)
+      const projectFolder = join(rootFolder, 'DevVault', 'projects', projectId)
       const excluded = new Set(['files', 'docs', 'credentials'])
       const folders: {
         name: string; path: string; size: number; isGitRepo: boolean
@@ -1297,7 +1303,7 @@ app.whenReady().then(() => {
     (_event, payload: { projectId: string; folderName: string }) => {
       try {
         const rootFolder = store.get('rootFolder') as string
-        const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+        const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
         if (fs.existsSync(folderPath)) fs.rmSync(folderPath, { recursive: true, force: true })
         return { success: true }
       } catch (err) {
@@ -1313,7 +1319,7 @@ app.whenReady().then(() => {
       try {
         const rootFolder = store.get('rootFolder') as string
         const depPath = join(
-          rootFolder, 'FreelanceVault', 'projects',
+          rootFolder, 'DevVault', 'projects',
           payload.projectId, payload.folderName, payload.depDirName
         )
         if (fs.existsSync(depPath)) fs.rmSync(depPath, { recursive: true, force: true })
@@ -1330,7 +1336,7 @@ app.whenReady().then(() => {
     async (_event, payload: { projectId: string; url: string; folderName: string }) => {
       try {
         const rootFolder = store.get('rootFolder') as string
-        const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId)
+        const projectFolder = join(rootFolder, 'DevVault', 'projects', payload.projectId)
         const env = {
           ...process.env,
           PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
@@ -1353,7 +1359,7 @@ app.whenReady().then(() => {
   ipcMain.handle('git:pull', async (_event, payload: { projectId: string; folderName: string }) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
@@ -1370,11 +1376,16 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('project:get-folder-path', (_event, projectId: string) => {
+    const rootFolder = store.get('rootFolder') as string
+    return join(rootFolder, 'DevVault', 'projects', projectId)
+  })
+
   // ─── Open in Editor ──────────────────────────────────────────
   ipcMain.handle('project:open-in-vscode', async (_event, projectId: string) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', projectId)
+      const projectFolder = join(rootFolder, 'DevVault', 'projects', projectId)
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
@@ -1389,16 +1400,102 @@ app.whenReady().then(() => {
   ipcMain.handle('project:open-in-antigravity', async (_event, projectId: string) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const projectFolder = join(rootFolder, 'FreelanceVault', 'projects', projectId)
+      const projectFolder = join(rootFolder, 'DevVault', 'projects', projectId)
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
       }
-      await execAsync(`antigravity "${projectFolder}"`, { env, shell: '/bin/zsh' })
+      try {
+        await execAsync(`antigravity "${projectFolder}"`, { env, shell: '/bin/zsh' })
+      } catch {
+        await execAsync(`open -a "Antigravity" "${projectFolder}"`, { env, shell: '/bin/zsh' })
+      }
       return { success: true }
     } catch (err) {
       return { success: false, error: String(err) }
     }
+  })
+
+  // ─── Open Code Folder in Editor ──────────────────────────────
+  ipcMain.handle('code:open-in-vscode', async (_event, payload: { projectId: string; folderName: string }) => {
+    try {
+      const rootFolder = store.get('rootFolder') as string
+      const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
+      }
+      await execAsync(`code "${folderPath}"`, { env, shell: '/bin/zsh' })
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('code:open-in-antigravity', async (_event, payload: { projectId: string; folderName: string }) => {
+    try {
+      const rootFolder = store.get('rootFolder') as string
+      const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
+      }
+      try {
+        await execAsync(`antigravity "${folderPath}"`, { env, shell: '/bin/zsh' })
+      } catch {
+        await execAsync(`open -a "Antigravity" "${folderPath}"`, { env, shell: '/bin/zsh' })
+      }
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  // ─── Detect Installed Editors ─────────────────────────────────
+  ipcMain.handle('editors:detect', async () => {
+    const candidates = [
+      { name: 'VS Code',       appName: 'Visual Studio Code', cli: 'code' },
+      { name: 'Cursor',        appName: 'Cursor',             cli: 'cursor' },
+      { name: 'Zed',           appName: 'Zed',                cli: 'zed' },
+      { name: 'Antigravity',   appName: 'Antigravity',        cli: 'antigravity' },
+      { name: 'Windsurf',      appName: 'Windsurf',           cli: 'windsurf' },
+      { name: 'Sublime Text',  appName: 'Sublime Text',       cli: 'subl' },
+      { name: 'WebStorm',      appName: 'WebStorm',           cli: null },
+      { name: 'Nova',          appName: 'Nova',               cli: 'nova' },
+    ]
+    const available: { name: string; appName: string; cli: string | null }[] = []
+    for (const ed of candidates) {
+      const appPath = `/Applications/${ed.appName}.app`
+      if (fs.existsSync(appPath)) {
+        available.push({ name: ed.name, appName: ed.appName, cli: ed.cli })
+      }
+    }
+    return available
+  })
+
+  // ─── Open Folder in Any Editor ────────────────────────────────
+  ipcMain.handle('editors:open', async (_event, payload: { folderPath: string; appName: string; cli: string | null }) => {
+    try {
+      const env = {
+        ...process.env,
+        PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || '/usr/bin:/bin'}`,
+      }
+      if (payload.cli) {
+        try {
+          await execAsync(`${payload.cli} "${payload.folderPath}"`, { env, shell: '/bin/zsh' })
+          return { success: true }
+        } catch { /* fallthrough to open -a */ }
+      }
+      await execAsync(`open -a "${payload.appName}" "${payload.folderPath}"`, { env, shell: '/bin/zsh' })
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('code:get-folder-path', (_event, payload: { projectId: string; folderName: string }) => {
+    const rootFolder = store.get('rootFolder') as string
+    return join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
   })
 
   // ─── Backup Export ────────────────────────────────────────────
@@ -1417,8 +1514,8 @@ app.whenReady().then(() => {
       const payload = Buffer.concat([magic, salt, iv, tag, enc])
       const { filePath } = await dialog.showSaveDialog({
         title: 'Save Backup',
-        defaultPath: `freelancevault-backup-${new Date().toISOString().slice(0, 10)}.fvb`,
-        filters: [{ name: 'FreelanceVault Backup', extensions: ['fvb'] }]
+        defaultPath: `devvault-backup-${new Date().toISOString().slice(0, 10)}.fvb`,
+        filters: [{ name: 'DevVault Backup', extensions: ['fvb'] }]
       })
       if (!filePath) return { success: false, error: 'cancelled' }
       fs.writeFileSync(filePath, payload)
@@ -1433,7 +1530,7 @@ app.whenReady().then(() => {
     try {
       const { filePaths } = await dialog.showOpenDialog({
         title: 'Open Backup',
-        filters: [{ name: 'FreelanceVault Backup', extensions: ['fvb'] }],
+        filters: [{ name: 'DevVault Backup', extensions: ['fvb'] }],
         properties: ['openFile']
       })
       if (!filePaths.length) return { success: false, error: 'cancelled' }
@@ -1460,7 +1557,7 @@ app.whenReady().then(() => {
   ipcMain.handle('script:list', async (_event, payload: { projectId: string; folderName: string }) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
       const pkgPath = join(folderPath, 'package.json')
       if (!fs.existsSync(pkgPath)) {
         // Check for pyproject.toml or setup.py for Python
@@ -1486,7 +1583,7 @@ app.whenReady().then(() => {
     'script:run',
     (_event, payload: { projectId: string; folderName: string; scriptName: string; command: string }) => {
       const rootFolder = store.get('rootFolder') as string
-      const folderPath = join(rootFolder, 'FreelanceVault', 'projects', payload.projectId, payload.folderName)
+      const folderPath = join(rootFolder, 'DevVault', 'projects', payload.projectId, payload.folderName)
       const env = {
         ...process.env,
         PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:${process.env.PATH || ''}`,
@@ -1525,7 +1622,7 @@ app.whenReady().then(() => {
   ipcMain.handle('invoice:generate', async (_event, payload: { html: string; filename: string }) => {
     try {
       const rootFolder = store.get('rootFolder') as string
-      const outDir = join(rootFolder, 'FreelanceVault', 'invoices')
+      const outDir = join(rootFolder, 'DevVault', 'invoices')
       fs.mkdirSync(outDir, { recursive: true })
       const outPath = join(outDir, payload.filename)
 
@@ -1543,6 +1640,139 @@ app.whenReady().then(() => {
       if (filePath && filePath !== outPath) fs.copyFileSync(outPath, filePath)
       shell.openPath(filePath || outPath)
       return { success: true, path: filePath || outPath }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  // ─── AI Config ────────────────────────────────────────────────
+  ipcMain.handle('ai:get-config', () => {
+    return store.get('aiConfig') || { selectedProvider: 'openai', openaiKey: '', geminiKey: '', deepseekKey: '' }
+  })
+
+  ipcMain.handle('ai:save-config', (_event, config: { selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }) => {
+    store.set('aiConfig', config)
+    return { success: true }
+  })
+
+  // ─── AI Generate LinkedIn ─────────────────────────────────────
+  ipcMain.handle('ai:generate-linkedin', async (_event, projectId: string) => {
+    try {
+      const aiConfig = (store.get('aiConfig') || {}) as { selectedProvider?: string; openaiKey?: string; geminiKey?: string; deepseekKey?: string }
+      const provider = aiConfig.selectedProvider || 'openai'
+      const apiKey =
+        provider === 'openai' ? aiConfig.openaiKey :
+        provider === 'gemini' ? aiConfig.geminiKey :
+        aiConfig.deepseekKey
+
+      if (!apiKey) return { success: false, error: 'No API key configured. Go to AI Manager to add your key.' }
+
+      // Read project code files
+      const rootFolder = store.get('rootFolder') as string
+      const projectFolder = join(rootFolder, 'DevVault', 'projects', projectId)
+      const excluded = new Set(['files', 'docs', 'credentials', 'node_modules', '.git', '__pycache__', '.next', 'dist', 'build', '.venv', 'venv'])
+
+      let codeContext = ''
+      const MAX_CHARS = 60000
+
+      function readCodeFiles(dir: string): void {
+        if (!fs.existsSync(dir)) return
+        const items = fs.readdirSync(dir)
+        for (const item of items) {
+          if (excluded.has(item) || item.startsWith('.')) continue
+          const fullPath = join(dir, item)
+          const stat = fs.statSync(fullPath)
+          if (stat.isDirectory()) {
+            readCodeFiles(fullPath)
+          } else {
+            const ext = item.split('.').pop()?.toLowerCase() || ''
+            const codeExts = new Set(['ts', 'tsx', 'js', 'jsx', 'py', 'go', 'rs', 'java', 'cs', 'cpp', 'c', 'swift', 'kt', 'rb', 'php', 'vue', 'svelte', 'json', 'yaml', 'yml', 'toml', 'md'])
+            if (!codeExts.has(ext)) continue
+            if (stat.size > 50000) continue // skip large files
+            if (codeContext.length >= MAX_CHARS) continue
+            try {
+              const content = fs.readFileSync(fullPath, 'utf-8')
+              const relPath = fullPath.replace(projectFolder + '/', '')
+              codeContext += `\n\n--- ${relPath} ---\n${content.slice(0, 3000)}`
+            } catch { /* skip unreadable files */ }
+          }
+        }
+      }
+
+      readCodeFiles(projectFolder)
+
+      if (!codeContext.trim()) {
+        return { success: false, error: 'No code files found in this project. Generate or add code first.' }
+      }
+
+      const prompt = `You are a professional technical writer helping a developer craft their LinkedIn Projects section entry.
+
+Analyze the following project code and generate LinkedIn Projects section content. Be specific about what this project actually does based on the code.
+
+PROJECT CODE:
+${codeContext.slice(0, MAX_CHARS)}
+
+Generate a JSON response with exactly this structure:
+{
+  "title": "A compelling project title (max 80 chars)",
+  "description": "A concise 2-3 sentence description optimized for LinkedIn's Projects section. Describe what the project does, key technical decisions, and impact. Write in third person or as a noun phrase. No hashtags. No emoji. Keep it professional and recruitier-friendly.",
+  "technologies": ["list", "of", "specific", "technologies", "used"],
+  "interviewQuestions": [
+    {
+      "question": "A specific technical interview question a hiring manager might ask about this project's architecture, design decisions, or implementation challenges",
+      "answer": "A strong, detailed model answer (3-5 sentences) that demonstrates technical depth and problem-solving skills. Reference actual patterns or decisions visible in the code."
+    }
+  ]
+}
+
+Generate exactly 5 interview Q&A pairs. Return ONLY valid JSON, no markdown, no explanation.`
+
+      let result: { title: string; description: string; technologies: string[]; interviewQuestions: { question: string; answer: string }[] }
+
+      if (provider === 'gemini') {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+            })
+          }
+        )
+        const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        result = JSON.parse(clean)
+      } else {
+        // OpenAI-compatible (openai + deepseek)
+        const baseUrl = provider === 'deepseek'
+          ? 'https://api.deepseek.com'
+          : 'https://api.openai.com/v1'
+        const model = provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o'
+
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: 4096
+          })
+        })
+        const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message: string } }
+        if (data?.error) return { success: false, error: data.error.message }
+        const text = data?.choices?.[0]?.message?.content || ''
+        const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        result = JSON.parse(clean)
+      }
+
+      return { success: true, data: result }
     } catch (err) {
       return { success: false, error: String(err) }
     }

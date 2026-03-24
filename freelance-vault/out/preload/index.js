@@ -30,6 +30,12 @@ const api = {
   gitPull: (payload) => electron.ipcRenderer.invoke("git:pull", payload),
   openInVscode: (projectId) => electron.ipcRenderer.invoke("project:open-in-vscode", projectId),
   openInAntigravity: (projectId) => electron.ipcRenderer.invoke("project:open-in-antigravity", projectId),
+  codeOpenInVscode: (payload) => electron.ipcRenderer.invoke("code:open-in-vscode", payload),
+  codeOpenInAntigravity: (payload) => electron.ipcRenderer.invoke("code:open-in-antigravity", payload),
+  codeGetFolderPath: (payload) => electron.ipcRenderer.invoke("code:get-folder-path", payload),
+  editorsDetect: () => electron.ipcRenderer.invoke("editors:detect"),
+  editorsOpen: (payload) => electron.ipcRenderer.invoke("editors:open", payload),
+  codeGetProjectFolderPath: (projectId) => electron.ipcRenderer.invoke("project:get-folder-path", projectId),
   backupExport: (pin) => electron.ipcRenderer.invoke("backup:export", pin),
   backupImport: (pin) => electron.ipcRenderer.invoke("backup:import", pin),
   scriptList: (payload) => electron.ipcRenderer.invoke("script:list", payload),
@@ -45,7 +51,10 @@ const api = {
     electron.ipcRenderer.on("script:done", handler);
     return () => electron.ipcRenderer.off("script:done", handler);
   },
-  invoiceGenerate: (payload) => electron.ipcRenderer.invoke("invoice:generate", payload)
+  invoiceGenerate: (payload) => electron.ipcRenderer.invoke("invoice:generate", payload),
+  aiGetConfig: () => electron.ipcRenderer.invoke("ai:get-config"),
+  aiSaveConfig: (config) => electron.ipcRenderer.invoke("ai:save-config", config),
+  aiGenerateLinkedin: (projectId) => electron.ipcRenderer.invoke("ai:generate-linkedin", projectId)
 };
 if (process.contextIsolated) {
   try {

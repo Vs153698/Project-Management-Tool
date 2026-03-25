@@ -8,6 +8,29 @@ export interface FileInfo {
   path: string
 }
 
+export interface ScannedFile {
+  name: string
+  path: string
+  size: number
+  modifiedAt: string
+}
+
+export interface CacheItem {
+  name: string
+  path: string
+  size: number
+  description: string
+}
+
+export interface ProjectInfo {
+  name: string
+  path: string
+  size: number
+  language: string
+  framework: string
+  modifiedAt: string
+}
+
 export type Framework =
   | 'vite'
   | 'nextjs'
@@ -146,6 +169,27 @@ export interface ElectronAPI {
   aiGetConfig: () => Promise<{ selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }>
   aiSaveConfig: (config: { selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }) => Promise<{ success: boolean }>
   aiGenerateLinkedin: (projectId: string) => Promise<{ success: boolean; data?: { title: string; description: string; technologies: string[]; interviewQuestions: { question: string; answer: string }[] }; error?: string }>
+
+  // Mac Storage Scanner
+  scannerGetStorageInfo: () => Promise<{ success: boolean; total: number; used: number; free: number; error?: string }>
+  scannerScanFiles: (sizeFilter: 'large' | 'medium' | 'small') => Promise<{ success: boolean; files: ScannedFile[]; error?: string }>
+  scannerGetCaches: () => Promise<{ success: boolean; caches: CacheItem[]; error?: string }>
+  scannerClearCache: (cachePath: string) => Promise<{ success: boolean; error?: string }>
+  scannerDeleteFiles: (filePaths: string[]) => Promise<{ success: boolean; results: { path: string; success: boolean; error?: string }[] }>
+  scannerGetProjects: () => Promise<{ success: boolean; projects: ProjectInfo[]; error?: string }>
+  scannerGetProjectContents: (projectPath: string) => Promise<{ success: boolean; entries: { name: string; path: string; size: number; isDir: boolean; isCleanable: boolean }[]; error?: string }>
+  masterGetBreakdown: () => Promise<{
+    success: boolean
+    diskTotal: number
+    diskFree: number
+    systemSize: number
+    buckets: {
+      id: string; name: string; color: string; size: number
+      status: string; note: string; mainPath: string
+      subItems: { name: string; path: string; size: number; canDelete: boolean }[]
+    }[]
+    error?: string
+  }>
 }
 
 const api: ElectronAPI = {
@@ -218,6 +262,15 @@ const api: ElectronAPI = {
   aiGetConfig: () => ipcRenderer.invoke('ai:get-config'),
   aiSaveConfig: (config) => ipcRenderer.invoke('ai:save-config', config),
   aiGenerateLinkedin: (projectId) => ipcRenderer.invoke('ai:generate-linkedin', projectId),
+
+  scannerGetStorageInfo: () => ipcRenderer.invoke('scanner:get-storage-info'),
+  scannerScanFiles: (sizeFilter) => ipcRenderer.invoke('scanner:scan-files', sizeFilter),
+  scannerGetCaches: () => ipcRenderer.invoke('scanner:get-caches'),
+  scannerClearCache: (cachePath) => ipcRenderer.invoke('scanner:clear-cache', cachePath),
+  scannerDeleteFiles: (filePaths) => ipcRenderer.invoke('scanner:delete-files', filePaths),
+  scannerGetProjects: () => ipcRenderer.invoke('scanner:get-projects'),
+  scannerGetProjectContents: (projectPath) => ipcRenderer.invoke('scanner:get-project-contents', projectPath),
+  masterGetBreakdown: () => ipcRenderer.invoke('master:get-breakdown'),
 }
 
 if (process.contextIsolated) {

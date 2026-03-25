@@ -79,7 +79,7 @@ export interface Database {
   savedLinkedInPosts?: SavedLinkedInPost[]
 }
 
-export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager'
+export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager' | 'mac-scanner' | 'mac-master'
 
 export type AIProvider = 'openai' | 'gemini' | 'deepseek'
 

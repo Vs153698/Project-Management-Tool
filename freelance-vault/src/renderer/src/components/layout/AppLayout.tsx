@@ -9,6 +9,8 @@ import BankDetailsPage from '../banking/BankDetailsPage'
 import BackupPage from '../backup/BackupPage'
 import AIManager from '../ai/AIManager'
 import QuickSwitcher from '../ui/QuickSwitcher'
+import MacStorageScanner from '../scanner/MacStorageScanner'
+import MacMaster from '../master/MacMaster'
 
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
@@ -35,6 +37,10 @@ export default function AppLayout(): JSX.Element {
         return <AIManager />
       case 'backup':
         return <BackupPage />
+      case 'mac-scanner':
+        return <MacStorageScanner />
+      case 'mac-master':
+        return <MacMaster />
       default:
         return <Dashboard />
     }

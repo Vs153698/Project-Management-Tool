@@ -54,7 +54,15 @@ const api = {
   invoiceGenerate: (payload) => electron.ipcRenderer.invoke("invoice:generate", payload),
   aiGetConfig: () => electron.ipcRenderer.invoke("ai:get-config"),
   aiSaveConfig: (config) => electron.ipcRenderer.invoke("ai:save-config", config),
-  aiGenerateLinkedin: (projectId) => electron.ipcRenderer.invoke("ai:generate-linkedin", projectId)
+  aiGenerateLinkedin: (projectId) => electron.ipcRenderer.invoke("ai:generate-linkedin", projectId),
+  scannerGetStorageInfo: () => electron.ipcRenderer.invoke("scanner:get-storage-info"),
+  scannerScanFiles: (sizeFilter) => electron.ipcRenderer.invoke("scanner:scan-files", sizeFilter),
+  scannerGetCaches: () => electron.ipcRenderer.invoke("scanner:get-caches"),
+  scannerClearCache: (cachePath) => electron.ipcRenderer.invoke("scanner:clear-cache", cachePath),
+  scannerDeleteFiles: (filePaths) => electron.ipcRenderer.invoke("scanner:delete-files", filePaths),
+  scannerGetProjects: () => electron.ipcRenderer.invoke("scanner:get-projects"),
+  scannerGetProjectContents: (projectPath) => electron.ipcRenderer.invoke("scanner:get-project-contents", projectPath),
+  masterGetBreakdown: () => electron.ipcRenderer.invoke("master:get-breakdown")
 };
 if (process.contextIsolated) {
   try {

@@ -2,6 +2,7 @@
 const electron = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const crypto = require("crypto");
 const child_process = require("child_process");
 const util = require("util");
@@ -1643,6 +1644,653 @@ Generate exactly 5 interview Q&A pairs. Return ONLY valid JSON, no markdown, no 
     } catch (err) {
       return { success: false, error: String(err) };
     }
+  });
+  electron.ipcMain.handle("master:get-breakdown", async () => {
+    try {
+      const home = os.homedir();
+      const dfTarget = fs.existsSync("/System/Volumes/Data") ? "/System/Volumes/Data" : "/";
+      const { stdout: dfOut } = await execAsync(`df -k "${dfTarget}"`, { timeout: 5e3 });
+      const dfParts = dfOut.trim().split("\n")[1].trim().split(/\s+/);
+      const diskTotal = parseInt(dfParts[1]) * 1024;
+      const diskFree = parseInt(dfParts[3]) * 1024;
+      const sizeOf = async (p) => {
+        if (!fs.existsSync(p)) return 0;
+        try {
+          const { stdout } = await execAsync(`du -sk "${p}" 2>/dev/null`, { timeout: 2e4 });
+          return parseInt(stdout.split("	")[0] || "0") * 1024;
+        } catch {
+          return 0;
+        }
+      };
+      const [
+        appsSize,
+        downloadsSize,
+        documentsSize,
+        desktopSize,
+        moviesSize,
+        musicSize,
+        picturesSize,
+        icloudSize,
+        mailSize,
+        trashSize,
+        logsSize,
+        appCachesSize,
+        appSupportSize,
+        derivedDataSize,
+        simulatorsSize,
+        xcodeArchivesSize,
+        xcodeDevSize,
+        npmSize,
+        yarnSize,
+        pnpmSize,
+        brewSize,
+        pipSize,
+        gradleSize,
+        mavenSize,
+        cocoapodsSize,
+        pubCacheSize,
+        cargoSize
+      ] = await Promise.all([
+        sizeOf("/Applications"),
+        sizeOf(path.join(home, "Downloads")),
+        sizeOf(path.join(home, "Documents")),
+        sizeOf(path.join(home, "Desktop")),
+        sizeOf(path.join(home, "Movies")),
+        sizeOf(path.join(home, "Music")),
+        sizeOf(path.join(home, "Pictures")),
+        sizeOf(path.join(home, "Library/Mobile Documents")),
+        sizeOf(path.join(home, "Library/Mail")),
+        sizeOf(path.join(home, ".Trash")),
+        sizeOf(path.join(home, "Library/Logs")),
+        sizeOf(path.join(home, "Library/Caches")),
+        sizeOf(path.join(home, "Library/Application Support")),
+        sizeOf(path.join(home, "Library/Developer/Xcode/DerivedData")),
+        sizeOf(path.join(home, "Library/Developer/CoreSimulator/Devices")),
+        sizeOf(path.join(home, "Library/Developer/Xcode/Archives")),
+        sizeOf(path.join(home, "Library/Developer/Xcode/iOS DeviceSupport")),
+        sizeOf(path.join(home, ".npm")),
+        sizeOf(path.join(home, ".yarn/cache")),
+        sizeOf(path.join(home, ".pnpm-store")),
+        sizeOf(path.join(home, "Library/Caches/Homebrew")),
+        sizeOf(path.join(home, "Library/Caches/pip")),
+        sizeOf(path.join(home, ".gradle/caches")),
+        sizeOf(path.join(home, ".m2/repository")),
+        sizeOf(path.join(home, ".cocoapods")),
+        sizeOf(path.join(home, ".pub-cache")),
+        sizeOf(path.join(home, ".cargo/registry"))
+      ]);
+      const devSize = derivedDataSize + simulatorsSize + xcodeArchivesSize + xcodeDevSize;
+      const pkgSize = npmSize + yarnSize + pnpmSize + brewSize + pipSize + gradleSize + mavenSize + cocoapodsSize + pubCacheSize + cargoSize;
+      const buckets = [
+        {
+          id: "applications",
+          name: "Applications",
+          color: "#3b82f6",
+          size: appsSize,
+          status: "system",
+          note: "Installed macOS apps. Use Launchpad or drag to Trash to remove.",
+          mainPath: "/Applications",
+          subItems: []
+        },
+        {
+          id: "downloads",
+          name: "Downloads",
+          color: "#f59e0b",
+          size: downloadsSize,
+          status: "user-files",
+          note: "Your downloaded files. Review and delete what you no longer need.",
+          mainPath: path.join(home, "Downloads"),
+          subItems: []
+        },
+        {
+          id: "documents",
+          name: "Documents",
+          color: "#10b981",
+          size: documentsSize,
+          status: "user-files",
+          note: "Your documents and files. Review manually.",
+          mainPath: path.join(home, "Documents"),
+          subItems: []
+        },
+        {
+          id: "desktop",
+          name: "Desktop",
+          color: "#06b6d4",
+          size: desktopSize,
+          status: "user-files",
+          note: "Files on your Desktop.",
+          mainPath: path.join(home, "Desktop"),
+          subItems: []
+        },
+        {
+          id: "movies",
+          name: "Movies & Videos",
+          color: "#ef4444",
+          size: moviesSize,
+          status: "user-files",
+          note: "Video files. Large videos you no longer need can be deleted.",
+          mainPath: path.join(home, "Movies"),
+          subItems: []
+        },
+        {
+          id: "music",
+          name: "Music",
+          color: "#ec4899",
+          size: musicSize,
+          status: "user-files",
+          note: "Music files and your library.",
+          mainPath: path.join(home, "Music"),
+          subItems: []
+        },
+        {
+          id: "pictures",
+          name: "Photos & Images",
+          color: "#f97316",
+          size: picturesSize,
+          status: "user-files",
+          note: "Photos library and image files.",
+          mainPath: path.join(home, "Pictures"),
+          subItems: []
+        },
+        {
+          id: "icloud",
+          name: "iCloud Drive",
+          color: "#60a5fa",
+          size: icloudSize,
+          status: "user-files",
+          note: "iCloud synced files. Manage via System Settings → iCloud.",
+          mainPath: path.join(home, "Library/Mobile Documents"),
+          subItems: []
+        },
+        {
+          id: "mail",
+          name: "Mail",
+          color: "#a78bfa",
+          size: mailSize,
+          status: "user-files",
+          note: "Downloaded email attachments and mailboxes. Clean up via Mail app.",
+          mainPath: path.join(home, "Library/Mail"),
+          subItems: []
+        },
+        {
+          id: "app-support",
+          name: "App Data",
+          color: "#6366f1",
+          size: appSupportSize,
+          status: "system",
+          note: "Application settings, databases, saved state. Deleting may break apps.",
+          mainPath: path.join(home, "Library/Application Support"),
+          subItems: []
+        },
+        {
+          id: "caches",
+          name: "App Caches",
+          color: "#22d3ee",
+          size: appCachesSize,
+          status: "cleanable",
+          note: "macOS & app caches — rebuild automatically after deletion.",
+          mainPath: path.join(home, "Library/Caches"),
+          subItems: [
+            { name: "All App Caches", path: path.join(home, "Library/Caches"), size: appCachesSize, canDelete: true }
+          ]
+        },
+        {
+          id: "developer",
+          name: "Developer Tools",
+          color: "#8b5cf6",
+          size: devSize,
+          status: devSize > 0 ? "cleanable" : "system",
+          note: "Xcode build artifacts and iOS simulators — safe to delete, they rebuild.",
+          mainPath: path.join(home, "Library/Developer"),
+          subItems: [
+            { name: "Xcode Derived Data", path: path.join(home, "Library/Developer/Xcode/DerivedData"), size: derivedDataSize, canDelete: true },
+            { name: "iOS Simulators", path: path.join(home, "Library/Developer/CoreSimulator/Devices"), size: simulatorsSize, canDelete: true },
+            { name: "Xcode Archives", path: path.join(home, "Library/Developer/Xcode/Archives"), size: xcodeArchivesSize, canDelete: true },
+            { name: "iOS Device Support", path: path.join(home, "Library/Developer/Xcode/iOS DeviceSupport"), size: xcodeDevSize, canDelete: true }
+          ].filter((s) => s.size > 0)
+        },
+        {
+          id: "pkg-caches",
+          name: "Package Caches",
+          color: "#34d399",
+          size: pkgSize,
+          status: pkgSize > 0 ? "cleanable" : "system",
+          note: "Dependency caches for npm, pip, Homebrew, etc. Safe to delete.",
+          mainPath: home,
+          subItems: [
+            { name: "npm", path: path.join(home, ".npm"), size: npmSize, canDelete: true },
+            { name: "Yarn", path: path.join(home, ".yarn/cache"), size: yarnSize, canDelete: true },
+            { name: "pnpm", path: path.join(home, ".pnpm-store"), size: pnpmSize, canDelete: true },
+            { name: "Homebrew", path: path.join(home, "Library/Caches/Homebrew"), size: brewSize, canDelete: true },
+            { name: "pip", path: path.join(home, "Library/Caches/pip"), size: pipSize, canDelete: true },
+            { name: "Gradle", path: path.join(home, ".gradle/caches"), size: gradleSize, canDelete: true },
+            { name: "Maven", path: path.join(home, ".m2/repository"), size: mavenSize, canDelete: true },
+            { name: "CocoaPods", path: path.join(home, ".cocoapods"), size: cocoapodsSize, canDelete: true },
+            { name: "Flutter", path: path.join(home, ".pub-cache"), size: pubCacheSize, canDelete: true },
+            { name: "Cargo", path: path.join(home, ".cargo/registry"), size: cargoSize, canDelete: true }
+          ].filter((s) => s.size > 0)
+        },
+        {
+          id: "logs",
+          name: "System Logs",
+          color: "#94a3b8",
+          size: logsSize,
+          status: "cleanable",
+          note: "Application log files. Safe to delete.",
+          mainPath: path.join(home, "Library/Logs"),
+          subItems: [
+            { name: "All Logs", path: path.join(home, "Library/Logs"), size: logsSize, canDelete: true }
+          ]
+        },
+        {
+          id: "trash",
+          name: "Trash",
+          color: "#6b7280",
+          size: trashSize,
+          status: "cleanable",
+          note: "Files in Trash waiting to be permanently deleted.",
+          mainPath: path.join(home, ".Trash"),
+          subItems: [
+            { name: "Empty Trash", path: path.join(home, ".Trash"), size: trashSize, canDelete: true }
+          ]
+        }
+      ].filter((b) => b.size > 0);
+      buckets.sort((a, b) => b.size - a.size);
+      const measuredTotal = buckets.reduce((s, b) => s + b.size, 0);
+      const systemSize = Math.max(0, diskTotal - diskFree - measuredTotal);
+      return { success: true, diskTotal, diskFree, systemSize, buckets };
+    } catch (err) {
+      return { success: false, error: String(err), diskTotal: 0, diskFree: 0, systemSize: 0, buckets: [] };
+    }
+  });
+  electron.ipcMain.handle("scanner:get-storage-info", async () => {
+    try {
+      const dfTarget = fs.existsSync("/System/Volumes/Data") ? "/System/Volumes/Data" : "/";
+      const { stdout } = await execAsync(`df -k "${dfTarget}"`, { timeout: 5e3 });
+      const parts = stdout.trim().split("\n")[1].trim().split(/\s+/);
+      const total = parseInt(parts[1]) * 1024;
+      const available = parseInt(parts[3]) * 1024;
+      const used = total - available;
+      return { success: true, total, used, free: available };
+    } catch (err) {
+      return { success: false, error: String(err), total: 0, used: 0, free: 0 };
+    }
+  });
+  electron.ipcMain.handle("scanner:scan-files", async (_event, sizeFilter) => {
+    try {
+      const home = os.homedir();
+      const scanRoots = [
+        home,
+        "/Applications",
+        "/private/var/folders"
+        // user temp / sandboxed app caches
+      ].filter((p) => fs.existsSync(p));
+      const args = [...scanRoots, "-type", "f"];
+      if (sizeFilter === "large") {
+        args.push("-size", "+102400k");
+      } else if (sizeFilter === "medium") {
+        args.push("-size", "+10240k", "-not", "-size", "+102400k");
+      } else {
+        args.push("-size", "+1024k", "-not", "-size", "+10240k");
+      }
+      args.push(
+        "-not",
+        "-path",
+        "*/node_modules/*",
+        "-not",
+        "-path",
+        "*/.git/*",
+        "-not",
+        "-path",
+        "*/Library/Caches/*",
+        "-not",
+        "-path",
+        "*/Library/Mail/V*",
+        "-not",
+        "-path",
+        "*/private/var/folders/*/C/*",
+        // sandboxed caches
+        "-not",
+        "-path",
+        "*/.Trash/*",
+        "-not",
+        "-path",
+        "*/System/*",
+        "-not",
+        "-path",
+        "*/private/var/vm/*"
+        // swap files
+      );
+      const stdout = await new Promise((resolve2) => {
+        let output = "";
+        const child = child_process.spawn("find", args);
+        child.stdout.on("data", (data) => {
+          output += data.toString();
+        });
+        child.on("close", () => resolve2(output));
+        child.on("error", () => resolve2(output));
+        setTimeout(() => {
+          child.kill();
+          resolve2(output);
+        }, 45e3);
+      });
+      const paths = stdout.trim().split("\n").filter(Boolean).slice(0, 1e3);
+      const files = paths.map((p) => {
+        try {
+          const stat = fs.statSync(p);
+          const nameParts = p.split("/");
+          return {
+            name: nameParts[nameParts.length - 1] || p,
+            path: p,
+            size: stat.size,
+            modifiedAt: stat.mtime.toISOString()
+          };
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      return { success: true, files };
+    } catch (err) {
+      return { success: false, files: [], error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("scanner:get-caches", async () => {
+    try {
+      const home = os.homedir();
+      const cacheDirs = [
+        // macOS system caches
+        { name: "App Caches", path: path.join(home, "Library/Caches"), description: "macOS application caches" },
+        { name: "App Logs", path: path.join(home, "Library/Logs"), description: "Application log files" },
+        { name: "Trash", path: path.join(home, ".Trash"), description: "Files waiting to be deleted" },
+        // Node / JS
+        { name: "npm Cache", path: path.join(home, ".npm"), description: "Node package manager cache" },
+        { name: "Yarn Cache", path: path.join(home, ".yarn/cache"), description: "Yarn package manager cache" },
+        { name: "pnpm Store", path: path.join(home, "Library/pnpm"), description: "pnpm package store" },
+        { name: "pnpm Cache", path: path.join(home, ".pnpm-store"), description: "pnpm content-addressable store" },
+        { name: "Bun Cache", path: path.join(home, "Library/Caches/bun"), description: "Bun runtime cache" },
+        // Apple dev tools
+        { name: "Xcode Derived Data", path: path.join(home, "Library/Developer/Xcode/DerivedData"), description: "Xcode build artifacts" },
+        { name: "Xcode Archives", path: path.join(home, "Library/Developer/Xcode/Archives"), description: "Xcode app archives" },
+        { name: "Xcode Device Support", path: path.join(home, "Library/Developer/Xcode/iOS DeviceSupport"), description: "Xcode iOS device symbols" },
+        { name: "iOS Simulators", path: path.join(home, "Library/Developer/CoreSimulator/Devices"), description: "iOS simulator device data" },
+        // Package managers
+        { name: "Homebrew Cache", path: path.join(home, "Library/Caches/Homebrew"), description: "Homebrew package downloads" },
+        { name: "pip Cache", path: path.join(home, "Library/Caches/pip"), description: "Python pip cache" },
+        { name: "Gradle Cache", path: path.join(home, ".gradle/caches"), description: "Gradle build cache" },
+        { name: "Maven Repository", path: path.join(home, ".m2/repository"), description: "Maven dependency cache" },
+        { name: "CocoaPods", path: path.join(home, ".cocoapods"), description: "iOS CocoaPods cache" },
+        { name: "Flutter/Dart", path: path.join(home, ".pub-cache"), description: "Flutter & Dart packages" },
+        { name: "Composer Cache", path: path.join(home, ".composer/cache"), description: "PHP Composer cache" },
+        { name: "RubyGems Cache", path: path.join(home, ".gem"), description: "Ruby gems cache" },
+        { name: "Cargo Registry", path: path.join(home, ".cargo/registry"), description: "Rust Cargo package registry" },
+        // Containers
+        { name: "Docker Data", path: path.join(home, "Library/Containers/com.docker.docker/Data"), description: "Docker container & image data" },
+        { name: "Docker Desktop Cache", path: path.join(home, "Library/Caches/com.docker.docker"), description: "Docker Desktop cache" },
+        // Apps
+        { name: "VS Code Extensions", path: path.join(home, ".vscode/extensions"), description: "VS Code installed extensions" },
+        { name: "Cursor Extensions", path: path.join(home, ".cursor/extensions"), description: "Cursor editor extensions" },
+        { name: "Slack Cache", path: path.join(home, "Library/Application Support/Slack/Cache"), description: "Slack message cache" },
+        { name: "Chrome Cache", path: path.join(home, "Library/Caches/Google/Chrome/Default/Cache"), description: "Google Chrome cache" },
+        { name: "Firefox Cache", path: path.join(home, "Library/Caches/Firefox/Profiles"), description: "Firefox browser cache" },
+        { name: "Spotify Cache", path: path.join(home, "Library/Caches/com.spotify.client"), description: "Spotify media cache" },
+        { name: "Zoom Cache", path: path.join(home, "Library/Caches/us.zoom.xos"), description: "Zoom meeting cache" }
+      ];
+      const results = await Promise.all(cacheDirs.map(async (c) => {
+        try {
+          if (!fs.existsSync(c.path)) return null;
+          const { stdout } = await execAsync(`du -sk "${c.path}" 2>/dev/null`, { timeout: 15e3 });
+          const size = parseInt(stdout.split("	")[0] || "0") * 1024;
+          if (size === 0) return null;
+          return { ...c, size };
+        } catch {
+          return null;
+        }
+      }));
+      return { success: true, caches: results.filter(Boolean) };
+    } catch (err) {
+      return { success: false, caches: [], error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("scanner:clear-cache", async (_event, cachePath) => {
+    try {
+      const home = os.homedir();
+      if (!cachePath.startsWith(home)) {
+        return { success: false, error: "Can only clear caches within home directory" };
+      }
+      if (fs.existsSync(cachePath)) {
+        fs.rmSync(cachePath, { recursive: true, force: true });
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("scanner:get-projects", async () => {
+    try {
+      let detectLang = function(projectPath, files) {
+        if (files.includes("package.json")) {
+          try {
+            const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"));
+            const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+            const isTs = files.includes("tsconfig.json") || !!deps["typescript"];
+            const lang = isTs ? "TypeScript" : "JavaScript";
+            if (deps["next"]) return { language: lang, framework: "Next.js" };
+            if (deps["react"] || deps["react-dom"]) return { language: lang, framework: deps["vite"] ? "Vite + React" : "React" };
+            if (deps["vue"]) return { language: lang, framework: "Vue" };
+            if (deps["@angular/core"]) return { language: lang, framework: "Angular" };
+            if (deps["svelte"]) return { language: lang, framework: "Svelte" };
+            if (deps["electron"]) return { language: lang, framework: "Electron" };
+            if (deps["express"]) return { language: lang, framework: "Express" };
+            if (deps["fastify"]) return { language: lang, framework: "Fastify" };
+            if (deps["@nestjs/core"]) return { language: lang, framework: "NestJS" };
+            return { language: lang, framework: "Node.js" };
+          } catch {
+            return { language: "JavaScript", framework: "Node.js" };
+          }
+        }
+        if (files.includes("requirements.txt") || files.includes("pyproject.toml") || files.includes("setup.py")) {
+          try {
+            const req = files.includes("requirements.txt") ? fs.readFileSync(path.join(projectPath, "requirements.txt"), "utf-8").toLowerCase() : "";
+            if (req.includes("django")) return { language: "Python", framework: "Django" };
+            if (req.includes("flask")) return { language: "Python", framework: "Flask" };
+            if (req.includes("fastapi")) return { language: "Python", framework: "FastAPI" };
+            if (req.includes("torch") || req.includes("pytorch")) return { language: "Python", framework: "PyTorch" };
+            if (req.includes("tensorflow")) return { language: "Python", framework: "TensorFlow" };
+          } catch {
+          }
+          return { language: "Python", framework: "Python" };
+        }
+        if (files.includes("Cargo.toml")) return { language: "Rust", framework: "Rust" };
+        if (files.includes("go.mod")) return { language: "Go", framework: "Go" };
+        if (files.includes("pubspec.yaml")) return { language: "Dart", framework: "Flutter" };
+        if (files.includes("pom.xml")) return { language: "Java", framework: "Maven" };
+        if (files.includes("build.gradle")) return { language: "Java/Kotlin", framework: "Gradle" };
+        if (files.includes("Gemfile")) return { language: "Ruby", framework: "Ruby" };
+        if (files.includes("composer.json")) return { language: "PHP", framework: "PHP" };
+        if (files.includes("CMakeLists.txt")) return { language: "C/C++", framework: "CMake" };
+        return { language: "Unknown", framework: "Project" };
+      };
+      const home = os.homedir();
+      const rootFolder = store.get("rootFolder") || "";
+      const excludePaths = [];
+      if (rootFolder) excludePaths.push(path.join(rootFolder, "DevVault"));
+      const appRoot = electron.app.getAppPath();
+      excludePaths.push(appRoot);
+      excludePaths.push(path.join(appRoot, ".."));
+      const shouldExclude = (p) => excludePaths.some((ex) => p === ex || p.startsWith(ex + "/"));
+      const skipDirs = /* @__PURE__ */ new Set([
+        "node_modules",
+        ".git",
+        "__pycache__",
+        ".next",
+        "dist",
+        "build",
+        "out",
+        ".venv",
+        "venv",
+        "env",
+        "Library",
+        "Applications",
+        "Movies",
+        "Music",
+        "Pictures",
+        "Public",
+        ".Trash",
+        ".cache",
+        "vendor",
+        "target",
+        ".build"
+      ]);
+      const containerDirs = /* @__PURE__ */ new Set([
+        "Downloads",
+        "Desktop",
+        "Documents",
+        "code",
+        "projects",
+        "dev",
+        "workspace",
+        "repos",
+        "src",
+        "work",
+        "Sites"
+      ]);
+      const projectMarkers = [
+        "package.json",
+        "requirements.txt",
+        "pyproject.toml",
+        "setup.py",
+        "Cargo.toml",
+        "go.mod",
+        "pom.xml",
+        "build.gradle",
+        "pubspec.yaml",
+        "composer.json",
+        "Gemfile",
+        "mix.exs",
+        "CMakeLists.txt"
+      ];
+      const projects = [];
+      const scanDir = async (dir, depth) => {
+        if (depth > 4) return;
+        let entries;
+        try {
+          entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const entry of entries) {
+          if (!entry.isDirectory() || entry.name.startsWith(".") || skipDirs.has(entry.name)) continue;
+          const fullPath = path.join(dir, entry.name);
+          if (shouldExclude(fullPath)) continue;
+          let dirFiles;
+          try {
+            dirFiles = fs.readdirSync(fullPath);
+          } catch {
+            continue;
+          }
+          const isProject = projectMarkers.some((m) => dirFiles.includes(m)) && !containerDirs.has(entry.name);
+          if (isProject) {
+            try {
+              const { stdout } = await execAsync(`du -sk "${fullPath}" 2>/dev/null`, { timeout: 15e3 });
+              const size = parseInt(stdout.split("	")[0] || "0") * 1024;
+              const stat = fs.statSync(fullPath);
+              projects.push({
+                name: entry.name,
+                path: fullPath,
+                size,
+                ...detectLang(fullPath, dirFiles),
+                modifiedAt: stat.mtime.toISOString()
+              });
+            } catch {
+            }
+          } else {
+            await scanDir(fullPath, depth + 1);
+          }
+        }
+      };
+      await scanDir(home, 1);
+      projects.sort((a, b) => b.size - a.size);
+      return { success: true, projects };
+    } catch (err) {
+      return { success: false, projects: [], error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("scanner:get-project-contents", async (_event, projectPath) => {
+    try {
+      const home = os.homedir();
+      if (!projectPath.startsWith(home)) return { success: false, error: "Outside home directory", entries: [] };
+      const cleanableDirs = /* @__PURE__ */ new Set([
+        "node_modules",
+        ".next",
+        "dist",
+        "build",
+        "out",
+        ".turbo",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "env",
+        ".cache",
+        "coverage",
+        "target",
+        "vendor",
+        ".gradle",
+        ".parcel-cache",
+        ".nuxt",
+        ".output",
+        "storybook-static",
+        ".docusaurus",
+        ".svelte-kit"
+      ]);
+      const entries = fs.readdirSync(projectPath, { withFileTypes: true });
+      const results = [];
+      await Promise.all(entries.map(async (entry) => {
+        const fullPath = path.join(projectPath, entry.name);
+        try {
+          if (entry.isDirectory()) {
+            const { stdout } = await execAsync(`du -sk "${fullPath}" 2>/dev/null`, { timeout: 1e4 });
+            const size = parseInt(stdout.split("	")[0] || "0") * 1024;
+            results.push({ name: entry.name, path: fullPath, size, isDir: true, isCleanable: cleanableDirs.has(entry.name) });
+          } else {
+            const ext = entry.name.split(".").pop()?.toLowerCase() || "";
+            const skipExts = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "mp4", "mov", "mp3", "wav", "otf", "ttf", "woff", "woff2"]);
+            if (skipExts.has(ext)) return;
+            const stat = fs.statSync(fullPath);
+            if (stat.size > 100 * 1024) {
+              results.push({ name: entry.name, path: fullPath, size: stat.size, isDir: false, isCleanable: false });
+            }
+          }
+        } catch {
+        }
+      }));
+      results.sort((a, b) => {
+        if (a.isCleanable !== b.isCleanable) return a.isCleanable ? -1 : 1;
+        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+        return b.size - a.size;
+      });
+      return { success: true, entries: results };
+    } catch (err) {
+      return { success: false, error: String(err), entries: [] };
+    }
+  });
+  electron.ipcMain.handle("scanner:delete-files", async (_event, filePaths) => {
+    const home = os.homedir();
+    const results = [];
+    for (const filePath of filePaths) {
+      try {
+        if (!filePath.startsWith(home)) {
+          results.push({ path: filePath, success: false, error: "Outside home directory" });
+          continue;
+        }
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        results.push({ path: filePath, success: true });
+      } catch (err) {
+        results.push({ path: filePath, success: false, error: String(err) });
+      }
+    }
+    return { success: true, results };
   });
   createMainWindow();
   electron.app.on("activate", () => {

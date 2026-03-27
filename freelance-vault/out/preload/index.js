@@ -55,6 +55,7 @@ const api = {
   aiGetConfig: () => electron.ipcRenderer.invoke("ai:get-config"),
   aiSaveConfig: (config) => electron.ipcRenderer.invoke("ai:save-config", config),
   aiGenerateLinkedin: (projectId) => electron.ipcRenderer.invoke("ai:generate-linkedin", projectId),
+  aiFormatRequirement: (payload) => electron.ipcRenderer.invoke("ai:format-requirement", payload),
   scannerGetStorageInfo: () => electron.ipcRenderer.invoke("scanner:get-storage-info"),
   scannerScanFiles: (sizeFilter) => electron.ipcRenderer.invoke("scanner:scan-files", sizeFilter),
   scannerGetCaches: () => electron.ipcRenderer.invoke("scanner:get-caches"),

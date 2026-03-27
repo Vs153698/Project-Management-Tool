@@ -27,6 +27,7 @@ import EnvManager from '../env/EnvManager'
 import ScriptRunner from '../scripts/ScriptRunner'
 import InvoiceGenerator from '../invoice/InvoiceGenerator'
 import LinkedInGenerator from '../ai/LinkedInGenerator'
+import ProjectPlanning from './ProjectPlanning'
 
 const statusColors: Record<string, string> = {
   not_started: 'text-text-muted bg-text-muted/10 border-text-muted/20',
@@ -76,7 +77,7 @@ function InfoItem({ icon: Icon, label, value, valueClass }: InfoItemProps) {
 
 export default function ProjectDetail({ projectId }: { projectId: string }): JSX.Element {
   const { db, setView, deleteProject, displayCurrency } = useAppStore()
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'planning' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin'>('overview')
   const [showEdit, setShowEdit] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -130,9 +131,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
 
   const isPersonal = project.projectType === 'personal'
 
-  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin'
+  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin' | 'planning'
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'planning', label: 'Planning' },
     ...(!isPersonal ? [{ key: 'payments' as TabKey, label: 'Payments' }] : []),
     { key: 'credentials', label: 'Credentials' },
     { key: 'files', label: 'Files' },
@@ -347,6 +349,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
                   Updated {format(parseISO(project.updatedAt), 'MMM d, yyyy')}
                 </div>
               </div>
+            )}
+
+            {activeTab === 'planning' && (
+              <ProjectPlanning projectId={project.id} />
             )}
 
             {activeTab === 'payments' && !isPersonal && (

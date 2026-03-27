@@ -1779,6 +1779,71 @@ Generate exactly 5 interview Q&A pairs. Return ONLY valid JSON, no markdown, no 
     }
   })
 
+  // ─── AI Format Requirement ────────────────────────────────────
+  ipcMain.handle('ai:format-requirement', async (_event, payload: { text: string; title: string }) => {
+    try {
+      const aiConfig = (store.get('aiConfig') || {}) as { selectedProvider?: string; openaiKey?: string; geminiKey?: string; deepseekKey?: string }
+      const provider = aiConfig.selectedProvider || 'openai'
+      const apiKey =
+        provider === 'openai' ? aiConfig.openaiKey :
+        provider === 'gemini' ? aiConfig.geminiKey :
+        aiConfig.deepseekKey
+
+      if (!apiKey) return { success: false, error: 'No API key configured. Go to AI Manager to add your key.' }
+
+      const prompt = `You are a professional product manager and software requirements analyst. Format the following raw client requirement into a clean, structured, actionable requirement document.
+
+Title: ${payload.title}
+Raw Input: ${payload.text}
+
+Format the requirement with the following structure (use markdown):
+## Summary
+A concise 1-2 sentence summary of what is required.
+
+## Details
+Clear, detailed breakdown of the requirement with specific technical or functional details.
+
+## Acceptance Criteria
+- Bullet point list of testable acceptance criteria (at least 3)
+
+## Notes
+Any important considerations, edge cases, or assumptions.
+
+Return only the formatted markdown content, no preamble.`
+
+      if (provider === 'gemini') {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.5, maxOutputTokens: 2048 }
+            })
+          }
+        )
+        const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        return { success: true, data: text.trim() }
+      } else {
+        const baseUrl = provider === 'deepseek' ? 'https://api.deepseek.com' : 'https://api.openai.com/v1'
+        const model = provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o'
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.5, max_tokens: 2048 })
+        })
+        const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message: string } }
+        if (data?.error) return { success: false, error: data.error.message }
+        const text = data?.choices?.[0]?.message?.content || ''
+        return { success: true, data: text.trim() }
+      }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
   // ─── Mac Storage Scanner ──────────────────────────────────────
   // ─── Mac Master ───────────────────────────────────────────────
   ipcMain.handle('master:get-breakdown', async () => {

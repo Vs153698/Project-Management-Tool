@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { User, Project, Payment, Credential, Database, AppView, BankDetail, TimeEntry, EnvVar, EnvProfile, SavedLinkedInPost } from '../types'
+import type { User, Project, Payment, Credential, Database, AppView, BankDetail, TimeEntry, EnvVar, EnvProfile, SavedLinkedInPost, Requirement, ProjectTodo, Improvement, FutureTask } from '../types'
 
 interface AppStore {
   user: User | null
@@ -49,6 +49,22 @@ interface AppStore {
 
   saveLinkedInPost: (post: SavedLinkedInPost) => Promise<void>
   deleteLinkedInPost: (id: string) => Promise<void>
+
+  addRequirement: (req: Requirement) => Promise<void>
+  updateRequirement: (id: string, updates: Partial<Requirement>) => Promise<void>
+  deleteRequirement: (id: string) => Promise<void>
+
+  addProjectTodo: (todo: ProjectTodo) => Promise<void>
+  updateProjectTodo: (id: string, updates: Partial<ProjectTodo>) => Promise<void>
+  deleteProjectTodo: (id: string) => Promise<void>
+
+  addImprovement: (imp: Improvement) => Promise<void>
+  updateImprovement: (id: string, updates: Partial<Improvement>) => Promise<void>
+  deleteImprovement: (id: string) => Promise<void>
+
+  addFutureTask: (task: FutureTask) => Promise<void>
+  updateFutureTask: (id: string, updates: Partial<FutureTask>) => Promise<void>
+  deleteFutureTask: (id: string) => Promise<void>
 
   bankDetails: BankDetail[]
   loadBankDetails: () => Promise<void>
@@ -184,7 +200,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       timeEntries: (db.timeEntries || []).filter((t) => t.projectId !== id),
       envVars: (db.envVars || []).filter((e) => e.projectId !== id),
       envProfiles: (db.envProfiles || []).filter((e) => e.projectId !== id),
-      savedLinkedInPosts: (db.savedLinkedInPosts || []).filter((p) => p.projectId !== id)
+      savedLinkedInPosts: (db.savedLinkedInPosts || []).filter((p) => p.projectId !== id),
+      requirements: (db.requirements || []).filter((r) => r.projectId !== id),
+      projectTodos: (db.projectTodos || []).filter((t) => t.projectId !== id),
+      improvements: (db.improvements || []).filter((i) => i.projectId !== id),
+      futureTasks: (db.futureTasks || []).filter((t) => t.projectId !== id)
     })
   },
 
@@ -262,6 +282,58 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteLinkedInPost: async (id: string) => {
     const { db, saveDb } = get()
     await saveDb({ ...db, savedLinkedInPosts: (db.savedLinkedInPosts || []).filter((p) => p.id !== id) })
+  },
+
+  addRequirement: async (req: Requirement) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, requirements: [...(db.requirements || []), req] })
+  },
+  updateRequirement: async (id: string, updates: Partial<Requirement>) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, requirements: (db.requirements || []).map((r) => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r) })
+  },
+  deleteRequirement: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, requirements: (db.requirements || []).filter((r) => r.id !== id) })
+  },
+
+  addProjectTodo: async (todo: ProjectTodo) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, projectTodos: [...(db.projectTodos || []), todo] })
+  },
+  updateProjectTodo: async (id: string, updates: Partial<ProjectTodo>) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, projectTodos: (db.projectTodos || []).map((t) => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t) })
+  },
+  deleteProjectTodo: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, projectTodos: (db.projectTodos || []).filter((t) => t.id !== id) })
+  },
+
+  addImprovement: async (imp: Improvement) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, improvements: [...(db.improvements || []), imp] })
+  },
+  updateImprovement: async (id: string, updates: Partial<Improvement>) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, improvements: (db.improvements || []).map((i) => i.id === id ? { ...i, ...updates, updatedAt: new Date().toISOString() } : i) })
+  },
+  deleteImprovement: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, improvements: (db.improvements || []).filter((i) => i.id !== id) })
+  },
+
+  addFutureTask: async (task: FutureTask) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, futureTasks: [...(db.futureTasks || []), task] })
+  },
+  updateFutureTask: async (id: string, updates: Partial<FutureTask>) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, futureTasks: (db.futureTasks || []).map((t) => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t) })
+  },
+  deleteFutureTask: async (id: string) => {
+    const { db, saveDb } = get()
+    await saveDb({ ...db, futureTasks: (db.futureTasks || []).filter((t) => t.id !== id) })
   },
 
   loadBankDetails: async () => {

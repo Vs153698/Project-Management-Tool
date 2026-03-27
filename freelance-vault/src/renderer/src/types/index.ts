@@ -69,6 +69,57 @@ export interface EnvProfile {
   createdAt: string
 }
 
+export interface Requirement {
+  id: string
+  projectId: string
+  date: string
+  title: string
+  rawContent: string
+  formattedContent?: string
+  source?: 'client' | 'internal' | 'meeting'
+  attachments?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectTodo {
+  id: string
+  projectId: string
+  title: string
+  description?: string
+  completed: boolean
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  dueDate?: string
+  category?: 'feature' | 'bug' | 'improvement' | 'task' | 'research'
+  requirementId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Improvement {
+  id: string
+  projectId: string
+  title: string
+  description: string
+  type: 'performance' | 'ux' | 'security' | 'feature' | 'code_quality' | 'documentation' | 'other'
+  status: 'proposed' | 'accepted' | 'rejected' | 'in_progress' | 'done'
+  priority: 'low' | 'medium' | 'high'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FutureTask {
+  id: string
+  projectId: string
+  title: string
+  description?: string
+  estimatedEffort?: 'small' | 'medium' | 'large' | 'xl'
+  phase?: string
+  priority: 'low' | 'medium' | 'high'
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Database {
   projects: Project[]
   payments: Payment[]
@@ -77,9 +128,13 @@ export interface Database {
   envVars: EnvVar[]
   envProfiles?: EnvProfile[]
   savedLinkedInPosts?: SavedLinkedInPost[]
+  requirements?: Requirement[]
+  projectTodos?: ProjectTodo[]
+  improvements?: Improvement[]
+  futureTasks?: FutureTask[]
 }
 
-export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager' | 'mac-scanner' | 'mac-master'
+export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager' | 'mac-tools'
 
 export type AIProvider = 'openai' | 'gemini' | 'deepseek'
 

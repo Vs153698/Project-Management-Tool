@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote, Shield, Search, Bot, HardDrive, Cpu } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, BarChart2, LogOut, ChevronDown, Banknote, Shield, Search, Bot, Cpu } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import type { AppView } from '../../types'
 import AppLogo from '../ui/AppLogo'
@@ -36,8 +36,7 @@ const navItems: NavItem[] = [
   { icon: BarChart2,       label: 'Analytics',    view: 'analytics'    },
   { icon: Banknote,        label: 'Bank Details', view: 'bank-details' },
   { icon: Bot,             label: 'AI Manager',   view: 'ai-manager'   },
-  { icon: HardDrive,       label: 'Mac Cleaner',  view: 'mac-scanner'  },
-  { icon: Cpu,             label: 'Mac Master',   view: 'mac-master'   },
+  { icon: Cpu,             label: 'Mac Tools',    view: 'mac-tools'    },
   { icon: Shield,          label: 'Backup',       view: 'backup'       },
 ]
 

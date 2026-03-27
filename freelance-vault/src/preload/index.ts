@@ -169,6 +169,7 @@ export interface ElectronAPI {
   aiGetConfig: () => Promise<{ selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }>
   aiSaveConfig: (config: { selectedProvider: string; openaiKey: string; geminiKey: string; deepseekKey: string }) => Promise<{ success: boolean }>
   aiGenerateLinkedin: (projectId: string) => Promise<{ success: boolean; data?: { title: string; description: string; technologies: string[]; interviewQuestions: { question: string; answer: string }[] }; error?: string }>
+  aiFormatRequirement: (payload: { text: string; title: string }) => Promise<{ success: boolean; data?: string; error?: string }>
 
   // Mac Storage Scanner
   scannerGetStorageInfo: () => Promise<{ success: boolean; total: number; used: number; free: number; error?: string }>
@@ -262,6 +263,7 @@ const api: ElectronAPI = {
   aiGetConfig: () => ipcRenderer.invoke('ai:get-config'),
   aiSaveConfig: (config) => ipcRenderer.invoke('ai:save-config', config),
   aiGenerateLinkedin: (projectId) => ipcRenderer.invoke('ai:generate-linkedin', projectId),
+  aiFormatRequirement: (payload) => ipcRenderer.invoke('ai:format-requirement', payload),
 
   scannerGetStorageInfo: () => ipcRenderer.invoke('scanner:get-storage-info'),
   scannerScanFiles: (sizeFilter) => ipcRenderer.invoke('scanner:scan-files', sizeFilter),

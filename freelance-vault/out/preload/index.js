@@ -63,7 +63,19 @@ const api = {
   scannerDeleteFiles: (filePaths) => electron.ipcRenderer.invoke("scanner:delete-files", filePaths),
   scannerGetProjects: () => electron.ipcRenderer.invoke("scanner:get-projects"),
   scannerGetProjectContents: (projectPath) => electron.ipcRenderer.invoke("scanner:get-project-contents", projectPath),
-  masterGetBreakdown: () => electron.ipcRenderer.invoke("master:get-breakdown")
+  masterGetBreakdown: () => electron.ipcRenderer.invoke("master:get-breakdown"),
+  googleSaveOAuthCreds: (creds) => electron.ipcRenderer.invoke("google:save-oauth-creds", creds),
+  googleGetOAuthCreds: () => electron.ipcRenderer.invoke("google:get-oauth-creds"),
+  googleAuthStatus: () => electron.ipcRenderer.invoke("google:auth-status"),
+  googleAuthStart: () => electron.ipcRenderer.invoke("google:auth-start"),
+  googleAuthRevoke: () => electron.ipcRenderer.invoke("google:auth-revoke"),
+  googleSheetsCreate: (projectId) => electron.ipcRenderer.invoke("google:sheets-create", projectId),
+  googleSheetsSync: (projectId) => electron.ipcRenderer.invoke("google:sheets-sync", projectId),
+  googleSheetsUpdateEmails: (payload) => electron.ipcRenderer.invoke("google:sheets-update-emails", payload),
+  googleSheetsRemoveEmail: (payload) => electron.ipcRenderer.invoke("google:sheets-remove-email", payload),
+  googleSheetsUpdateAutosync: (payload) => electron.ipcRenderer.invoke("google:sheets-update-autosync", payload),
+  googleSheetsDelete: (projectId) => electron.ipcRenderer.invoke("google:sheets-delete", projectId),
+  googleSheetsGetConfig: (projectId) => electron.ipcRenderer.invoke("google:sheets-get-config", projectId)
 };
 if (process.contextIsolated) {
   try {

@@ -191,6 +191,32 @@ export interface ElectronAPI {
     }[]
     error?: string
   }>
+
+  // Google Sheets
+  googleSaveOAuthCreds: (creds: { clientId: string; clientSecret: string }) => Promise<{ success: boolean; error?: string }>
+  googleGetOAuthCreds: () => Promise<{ success: boolean; clientId: string; hasSecret: boolean }>
+  googleAuthStatus: () => Promise<{ authenticated: boolean }>
+  googleAuthStart: () => Promise<{ success: boolean; error?: string }>
+  googleAuthRevoke: () => Promise<{ success: boolean }>
+  googleSheetsCreate: (projectId: string) => Promise<{ success: boolean; spreadsheetId?: string; spreadsheetUrl?: string; error?: string }>
+  googleSheetsSync: (projectId: string) => Promise<{ success: boolean; lastSynced?: string; error?: string }>
+  googleSheetsUpdateEmails: (payload: { projectId: string; emails: string[] }) => Promise<{ success: boolean; sharedEmails?: string[]; error?: string }>
+  googleSheetsRemoveEmail: (payload: { projectId: string; email: string }) => Promise<{ success: boolean; sharedEmails?: string[]; error?: string }>
+  googleSheetsUpdateAutosync: (payload: { projectId: string; autoSync: boolean }) => Promise<{ success: boolean; error?: string }>
+  googleSheetsDelete: (projectId: string) => Promise<{ success: boolean; error?: string }>
+  googleSheetsGetConfig: (projectId: string) => Promise<{
+    success: boolean
+    config: {
+      projectId: string
+      spreadsheetId: string
+      spreadsheetUrl: string
+      sharedEmails: string[]
+      lastSynced?: string
+      autoSync: boolean
+      createdAt: string
+    } | null
+    error?: string
+  }>
 }
 
 const api: ElectronAPI = {
@@ -273,6 +299,19 @@ const api: ElectronAPI = {
   scannerGetProjects: () => ipcRenderer.invoke('scanner:get-projects'),
   scannerGetProjectContents: (projectPath) => ipcRenderer.invoke('scanner:get-project-contents', projectPath),
   masterGetBreakdown: () => ipcRenderer.invoke('master:get-breakdown'),
+
+  googleSaveOAuthCreds: (creds) => ipcRenderer.invoke('google:save-oauth-creds', creds),
+  googleGetOAuthCreds: () => ipcRenderer.invoke('google:get-oauth-creds'),
+  googleAuthStatus: () => ipcRenderer.invoke('google:auth-status'),
+  googleAuthStart: () => ipcRenderer.invoke('google:auth-start'),
+  googleAuthRevoke: () => ipcRenderer.invoke('google:auth-revoke'),
+  googleSheetsCreate: (projectId) => ipcRenderer.invoke('google:sheets-create', projectId),
+  googleSheetsSync: (projectId) => ipcRenderer.invoke('google:sheets-sync', projectId),
+  googleSheetsUpdateEmails: (payload) => ipcRenderer.invoke('google:sheets-update-emails', payload),
+  googleSheetsRemoveEmail: (payload) => ipcRenderer.invoke('google:sheets-remove-email', payload),
+  googleSheetsUpdateAutosync: (payload) => ipcRenderer.invoke('google:sheets-update-autosync', payload),
+  googleSheetsDelete: (projectId) => ipcRenderer.invoke('google:sheets-delete', projectId),
+  googleSheetsGetConfig: (projectId) => ipcRenderer.invoke('google:sheets-get-config', projectId),
 }
 
 if (process.contextIsolated) {

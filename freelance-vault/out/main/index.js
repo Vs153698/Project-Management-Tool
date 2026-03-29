@@ -3,6 +3,8 @@ const electron = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const http = require("http");
+const url = require("url");
 const crypto = require("crypto");
 const child_process = require("child_process");
 const util = require("util");
@@ -99,6 +101,7 @@ const optimizer = {
     });
   }
 };
+const { google } = require("googleapis");
 const Store = require("electron-store");
 const execAsync = util.promisify(child_process.exec);
 const store = new Store({
@@ -761,8 +764,8 @@ function createMainWindow() {
     }
   });
   mainWindow.on("ready-to-show", () => mainWindow.show());
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    electron.shell.openExternal(url);
+  mainWindow.webContents.setWindowOpenHandler(({ url: url2 }) => {
+    electron.shell.openExternal(url2);
     return { action: "deny" };
   });
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
@@ -2349,6 +2352,755 @@ Return only the formatted markdown content, no preamble.`;
     }
     return { success: true, results };
   });
+  const GOOGLE_SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file"
+  ];
+  function buildOAuthClient(clientId, clientSecret, redirectUri) {
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  }
+  electron.ipcMain.handle("google:save-oauth-creds", async (_event, creds) => {
+    try {
+      store.set("googleOAuthCreds", creds);
+      store.delete("googleTokens");
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:get-oauth-creds", async () => {
+    const creds = store.get("googleOAuthCreds");
+    return { success: true, clientId: creds?.clientId || "", hasSecret: !!creds?.clientSecret };
+  });
+  electron.ipcMain.handle("google:auth-status", async () => {
+    const creds = store.get("googleOAuthCreds");
+    const tokens = store.get("googleTokens");
+    if (!creds || !tokens?.refresh_token) return { authenticated: false };
+    return { authenticated: true };
+  });
+  electron.ipcMain.handle("google:auth-start", async () => {
+    const creds = store.get("googleOAuthCreds");
+    if (!creds) return { success: false, error: "No OAuth credentials saved" };
+    return new Promise((resolve2) => {
+      const server = http.createServer();
+      server.listen(0, "localhost", () => {
+        const address = server.address();
+        const port = address.port;
+        const redirectUri = `http://localhost:${port}`;
+        const oauth2Client = buildOAuthClient(creds.clientId, creds.clientSecret, redirectUri);
+        const authUrl = oauth2Client.generateAuthUrl({
+          access_type: "offline",
+          scope: GOOGLE_SCOPES,
+          prompt: "consent"
+        });
+        electron.shell.openExternal(authUrl);
+        server.on("request", async (req, res) => {
+          try {
+            const reqUrl = new url.URL(req.url || "/", `http://localhost:${port}`);
+            const code = reqUrl.searchParams.get("code");
+            const error = reqUrl.searchParams.get("error");
+            res.writeHead(200, { "Content-Type": "text/html" });
+            if (error || !code) {
+              res.end("<html><body><h2>Authentication failed. You can close this tab.</h2></body></html>");
+              server.close();
+              resolve2({ success: false, error: error || "No code received" });
+              return;
+            }
+            const { tokens } = await oauth2Client.getToken(code);
+            store.set("googleTokens", tokens);
+            res.end('<html><body style="font-family:sans-serif;text-align:center;padding:40px"><h2 style="color:#22c55e">Connected to Google!</h2><p>You can close this tab and return to DevVault.</p></body></html>');
+            server.close();
+            resolve2({ success: true });
+          } catch (err) {
+            res.end("<html><body><h2>Error. Please try again.</h2></body></html>");
+            server.close();
+            resolve2({ success: false, error: String(err) });
+          }
+        });
+        setTimeout(() => {
+          server.close();
+          resolve2({ success: false, error: "Authentication timed out" });
+        }, 18e4);
+      });
+    });
+  });
+  electron.ipcMain.handle("google:auth-revoke", async () => {
+    store.delete("googleTokens");
+    return { success: true };
+  });
+  async function getAuthenticatedClient() {
+    const creds = store.get("googleOAuthCreds");
+    const tokens = store.get("googleTokens");
+    if (!creds || !tokens) throw new Error("Not authenticated with Google");
+    const oauth2Client = buildOAuthClient(creds.clientId, creds.clientSecret, "http://localhost");
+    oauth2Client.setCredentials(tokens);
+    oauth2Client.on("tokens", (newTokens) => {
+      const current = store.get("googleTokens");
+      store.set("googleTokens", { ...current, ...newTokens });
+    });
+    return oauth2Client;
+  }
+  electron.ipcMain.handle("google:sheets-create", async (_event, projectId) => {
+    try {
+      const auth = await getAuthenticatedClient();
+      const sheetsApi = google.sheets({ version: "v4", auth });
+      const driveApi = google.drive({ version: "v3", auth });
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const project = db.projects?.find((p) => p.id === projectId);
+      if (!project) return { success: false, error: "Project not found" };
+      const createRes = await sheetsApi.spreadsheets.create({
+        requestBody: {
+          properties: { title: `${project.projectName} — Client View` },
+          sheets: [
+            { properties: { title: "Overview", sheetId: 0 } },
+            { properties: { title: "Requirements", sheetId: 1 } },
+            { properties: { title: "Tasks", sheetId: 2 } },
+            { properties: { title: "Credentials", sheetId: 3 } },
+            { properties: { title: "Future Tasks", sheetId: 4 } },
+            { properties: { title: "Env Vars", sheetId: 5 } }
+          ]
+        }
+      });
+      const spreadsheetId = createRes.data.spreadsheetId;
+      const spreadsheetUrl = createRes.data.spreadsheetUrl;
+      await populateSheets(sheetsApi, spreadsheetId, db, projectId, project);
+      await applySheetFormatting(sheetsApi, spreadsheetId);
+      db.googleSheetsConfigs = db.googleSheetsConfigs || [];
+      db.googleSheetsConfigs = db.googleSheetsConfigs.filter((c) => c.projectId !== projectId);
+      db.googleSheetsConfigs.push({
+        projectId,
+        spreadsheetId,
+        spreadsheetUrl,
+        sharedEmails: [],
+        lastSynced: (/* @__PURE__ */ new Date()).toISOString(),
+        autoSync: false,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      await driveApi.permissions.create({
+        fileId: spreadsheetId,
+        requestBody: { role: "reader", type: "anyone" }
+      });
+      return { success: true, spreadsheetId, spreadsheetUrl };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-sync", async (_event, projectId) => {
+    try {
+      const auth = await getAuthenticatedClient();
+      const sheetsApi = google.sheets({ version: "v4", auth });
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId);
+      if (!config) return { success: false, error: "No sheet linked for this project" };
+      const project = db.projects?.find((p) => p.id === projectId);
+      if (!project) return { success: false, error: "Project not found" };
+      await populateSheets(sheetsApi, config.spreadsheetId, db, projectId, project);
+      config.lastSynced = (/* @__PURE__ */ new Date()).toISOString();
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, lastSynced: config.lastSynced };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-update-emails", async (_event, { projectId, emails }) => {
+    try {
+      const auth = await getAuthenticatedClient();
+      const driveApi = google.drive({ version: "v3", auth });
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId);
+      if (!config) return { success: false, error: "No sheet linked" };
+      const addedEmails = [];
+      for (const email of emails) {
+        if (!config.sharedEmails.includes(email)) {
+          await driveApi.permissions.create({
+            fileId: config.spreadsheetId,
+            sendNotificationEmail: true,
+            requestBody: { role: "commenter", type: "user", emailAddress: email }
+          });
+          addedEmails.push(email);
+        }
+      }
+      config.sharedEmails = [.../* @__PURE__ */ new Set([...config.sharedEmails, ...emails])];
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, sharedEmails: config.sharedEmails };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-remove-email", async (_event, { projectId, email }) => {
+    try {
+      const auth = await getAuthenticatedClient();
+      const driveApi = google.drive({ version: "v3", auth });
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId);
+      if (!config) return { success: false, error: "No sheet linked" };
+      const permsRes = await driveApi.permissions.list({ fileId: config.spreadsheetId, fields: "permissions(id,emailAddress)" });
+      const perm = permsRes.data.permissions?.find((p) => p.emailAddress === email);
+      if (perm?.id) {
+        await driveApi.permissions.delete({ fileId: config.spreadsheetId, permissionId: perm.id });
+      }
+      config.sharedEmails = config.sharedEmails.filter((e) => e !== email);
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, sharedEmails: config.sharedEmails };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-delete", async (_event, projectId) => {
+    try {
+      const auth = await getAuthenticatedClient();
+      const driveApi = google.drive({ version: "v3", auth });
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId);
+      if (!config) return { success: false, error: "No sheet linked" };
+      await driveApi.files.delete({ fileId: config.spreadsheetId });
+      db.googleSheetsConfigs = (db.googleSheetsConfigs || []).filter((c) => c.projectId !== projectId);
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-update-autosync", async (_event, { projectId, autoSync }) => {
+    try {
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId);
+      if (!config) return { success: false, error: "No sheet linked" };
+      config.autoSync = autoSync;
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+  electron.ipcMain.handle("google:sheets-get-config", async (_event, projectId) => {
+    try {
+      const dbPath = getDbPath2();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      const db = JSON.parse(raw);
+      const config = db.googleSheetsConfigs?.find((c) => c.projectId === projectId) || null;
+      return { success: true, config };
+    } catch (err) {
+      return { success: false, error: String(err), config: null };
+    }
+  });
+  const C = {
+    // Banners & headers — deep navy blue (professional, not dark purple)
+    deepBg: { red: 0.11, green: 0.196, blue: 0.349 },
+    // #1c3259 – banner
+    midBg: { red: 0.18, green: 0.286, blue: 0.459 },
+    // #386cb2 – accent
+    teal: { red: 0.071, green: 0.529, blue: 0.549 },
+    // #12878c
+    green: { red: 0.133, green: 0.592, blue: 0.322 },
+    // #229752
+    orange: { red: 0.871, green: 0.482, blue: 0.078 },
+    // #de7b14
+    red: { red: 0.78, green: 0.18, blue: 0.18 },
+    // #c72e2e
+    grayBg: { red: 0.49, green: 0.51, blue: 0.549 },
+    // #7d828c
+    white: { red: 1, green: 1, blue: 1 },
+    // Label column — muted steel blue
+    labelBg: { red: 0.235, green: 0.31, blue: 0.431 },
+    // #3c4f6e
+    // Alternating rows — clean off-white, barely visible
+    altRow1: { red: 0.973, green: 0.976, blue: 0.984 },
+    // #f8f9fb
+    altRow2: { red: 0.918, green: 0.929, blue: 0.949 },
+    // #eaecf2
+    // Text
+    textDark: { red: 0.102, green: 0.122, blue: 0.161 },
+    // #1a1f29
+    textMid: { red: 0.329, green: 0.373, blue: 0.447 },
+    // #545f72
+    // Semantic row tints
+    warnBg: { red: 1, green: 0.953, blue: 0.839 },
+    // #fff3d6
+    doneBg: { red: 0.878, green: 0.957, blue: 0.906 },
+    // #e0f4e7
+    credBg: { red: 0.996, green: 0.949, blue: 0.902 }
+  };
+  function rgb(c) {
+    return c;
+  }
+  function cell(bg, fg, opts = {}) {
+    return {
+      userEnteredFormat: {
+        backgroundColor: bg,
+        horizontalAlignment: opts.align || "LEFT",
+        verticalAlignment: opts.valign || "MIDDLE",
+        wrapStrategy: opts.wrap || "CLIP",
+        textFormat: {
+          foregroundColor: fg,
+          fontSize: opts.fontSize || 10,
+          bold: opts.bold || false,
+          italic: opts.italic || false
+        }
+      }
+    };
+  }
+  function gridRange(sheetId, r0, r1, c0, c1) {
+    return { sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 };
+  }
+  function repeatCell(sheetId, r0, r1, c0, c1, bg, fg, opts = {}) {
+    return {
+      repeatCell: {
+        range: gridRange(sheetId, r0, r1, c0, c1),
+        cell: cell(bg, fg, opts),
+        fields: "userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)"
+      }
+    };
+  }
+  function merge(sheetId, r0, r1, c0, c1) {
+    return { mergeCells: { range: gridRange(sheetId, r0, r1, c0, c1), mergeType: "MERGE_ALL" } };
+  }
+  function rowHeight(sheetId, r0, r1, px) {
+    return { updateDimensionProperties: { range: { sheetId, dimension: "ROWS", startIndex: r0, endIndex: r1 }, properties: { pixelSize: px }, fields: "pixelSize" } };
+  }
+  function colWidth(sheetId, c0, c1, px) {
+    return { updateDimensionProperties: { range: { sheetId, dimension: "COLUMNS", startIndex: c0, endIndex: c1 }, properties: { pixelSize: px }, fields: "pixelSize" } };
+  }
+  function tabColor(sheetId, color) {
+    return { updateSheetProperties: { properties: { sheetId, tabColorStyle: { rgbColor: color } }, fields: "tabColorStyle" } };
+  }
+  function border(sheetId, r0, r1, c0, c1) {
+    const line = { style: "SOLID", colorStyle: { rgbColor: { red: 0.816, green: 0.796, blue: 0.918 } } };
+    return {
+      updateBorders: {
+        range: gridRange(sheetId, r0, r1, c0, c1),
+        top: line,
+        bottom: line,
+        left: line,
+        right: line,
+        innerHorizontal: line,
+        innerVertical: line
+      }
+    };
+  }
+  function statusColor(status) {
+    const map = {
+      completed: { red: 0.133, green: 0.773, blue: 0.369 },
+      in_progress: { red: 0.024, green: 0.714, blue: 0.831 },
+      on_hold: { red: 0.953, green: 0.537, blue: 0.063 },
+      cancelled: { red: 0.914, green: 0.267, blue: 0.267 },
+      not_started: { red: 0.647, green: 0.647, blue: 0.647 }
+    };
+    return map[status] || map.not_started;
+  }
+  function priorityColor(priority) {
+    const map = {
+      urgent: { red: 0.914, green: 0.267, blue: 0.267 },
+      high: { red: 0.953, green: 0.537, blue: 0.063 },
+      medium: { red: 0.992, green: 0.835, blue: 0.2 },
+      low: { red: 0.133, green: 0.773, blue: 0.369 }
+    };
+    return map[priority] || map.low;
+  }
+  function effortColor(effort) {
+    const map = {
+      xl: { red: 0.914, green: 0.267, blue: 0.267 },
+      large: { red: 0.953, green: 0.537, blue: 0.063 },
+      medium: { red: 0.992, green: 0.835, blue: 0.2 },
+      small: { red: 0.133, green: 0.773, blue: 0.369 }
+    };
+    return map[effort] || C.grayBg;
+  }
+  function fmtStatus(s) {
+    return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function fmtDate(d) {
+    if (!d) return "—";
+    try {
+      return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return d;
+    }
+  }
+  async function populateSheets(sheetsApi, spreadsheetId, db, projectId, project) {
+    const requirements = (db.requirements || []).filter((r) => r.projectId === projectId);
+    const todos = (db.projectTodos || []).filter((t) => t.projectId === projectId);
+    const creds = (db.credentials || []).filter((c) => c.projectId === projectId);
+    const futureTasks = (db.futureTasks || []).filter((f) => f.projectId === projectId);
+    const envVars = (db.envVars || []).filter((e) => e.projectId === projectId);
+    const doneTasks = todos.filter((t) => t.completed).length;
+    const pendingTasks = todos.length - doneTasks;
+    const overviewValues = [
+      // Row 0: Main banner
+      ["PROJECT OVERVIEW", "", ""],
+      // Row 1: Project name
+      [project.projectName, "", ""],
+      // Row 2: Client subtitle
+      [`Client: ${project.clientName}`, "", ""],
+      // Row 3: Spacer
+      ["", "", ""],
+      // Row 4: Stat card labels
+      ["STATUS", "START DATE", "DEADLINE"],
+      // Row 5: Stat card values
+      [fmtStatus(project.status), fmtDate(project.startDate), project.deadline ? `Due ${fmtDate(project.deadline)}` : "—"],
+      // Row 6: Spacer
+      ["", "", ""],
+      // Row 7: Section header
+      ["PROJECT DETAILS", "", ""],
+      // Row 8-16: Details
+      ["Project Name", project.projectName, ""],
+      ["Client", project.clientName, ""],
+      ["Status", fmtStatus(project.status), ""],
+      ["Start Date", fmtDate(project.startDate), ""],
+      ["End Date", fmtDate(project.endDate), ""],
+      ["Deadline", fmtDate(project.deadline), ""],
+      ["Tags", (project.tags || []).join(", ") || "—", ""],
+      ["GitHub", project.githubUrl || "—", ""],
+      ["Last Updated", fmtDate(project.updatedAt), ""],
+      // Row 17: Spacer
+      ["", "", ""],
+      // Row 18: Description section
+      ["DESCRIPTION", "", ""],
+      // Row 19: Description value
+      [project.description || "(No description provided)", "", ""]
+    ];
+    const reqHeaders = ["#", "Date", "Title", "Source", "Details"];
+    const reqValues = [
+      ["", "", "", "", ""],
+      // row 0: banner
+      ["", "", "", "", ""],
+      // row 1: spacer
+      reqHeaders,
+      // row 2: column headers
+      ...requirements.map((r, i) => [
+        String(i + 1),
+        fmtDate(r.date),
+        r.title || "",
+        r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : "",
+        (r.formattedContent || r.rawContent || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().substring(0, 5e3)
+      ])
+    ];
+    const taskHeaders = ["#", "Title", "Category", "Priority", "Status", "Due Date"];
+    const taskValues = [
+      ["", "", "", "", "", ""],
+      // row 0: banner
+      [`${todos.length} Tasks`, `${doneTasks} Done`, `${pendingTasks} Pending`, "", "", ""],
+      // row 1: stats
+      ["", "", "", "", "", ""],
+      // row 2: spacer
+      taskHeaders,
+      // row 3: headers
+      ...todos.map((t, i) => [
+        String(i + 1),
+        t.title || "",
+        t.category ? t.category.charAt(0).toUpperCase() + t.category.slice(1) : "",
+        t.priority ? t.priority.toUpperCase() : "",
+        t.completed ? "DONE" : "PENDING",
+        fmtDate(t.dueDate)
+      ])
+    ];
+    const credHeaders = ["#", "Label", "Type", "Username", "URL", "Value", "Notes"];
+    const credValues = [
+      ["", "", "", "", "", "", ""],
+      // row 0: banner
+      ["", "", "", "", "", "", ""],
+      // row 1: warning
+      ["", "", "", "", "", "", ""],
+      // row 2: spacer
+      credHeaders,
+      // row 3: headers
+      ...creds.map((c, i) => [
+        String(i + 1),
+        c.label || "",
+        c.type ? c.type.replace(/_/g, " ").toUpperCase() : "",
+        c.username || "—",
+        c.url || "—",
+        c.value || "",
+        c.notes || ""
+      ])
+    ];
+    const futureHeaders = ["#", "Title", "Priority", "Effort", "Phase", "Description"];
+    const futureValues = [
+      ["", "", "", "", "", ""],
+      // row 0: banner
+      ["", "", "", "", "", ""],
+      // row 1: spacer
+      futureHeaders,
+      // row 2: headers
+      ...futureTasks.map((f, i) => [
+        String(i + 1),
+        f.title || "",
+        f.priority ? f.priority.toUpperCase() : "",
+        f.estimatedEffort ? f.estimatedEffort.toUpperCase() : "",
+        f.phase || "—",
+        f.description || ""
+      ])
+    ];
+    const envHeaders = ["#", "Key", "Value", "Environment", "Group"];
+    const envValues = [
+      ["", "", "", "", ""],
+      // row 0: banner
+      ["", "", "", "", ""],
+      // row 1: spacer
+      envHeaders,
+      // row 2: headers
+      ...envVars.map((e, i) => [
+        String(i + 1),
+        e.key || "",
+        e.value || "",
+        e.environment || "—",
+        e.group || "—"
+      ])
+    ];
+    await sheetsApi.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        valueInputOption: "RAW",
+        data: [
+          { range: "Overview!A1", values: overviewValues },
+          { range: "Requirements!A1", values: reqValues },
+          { range: "Tasks!A1", values: taskValues },
+          { range: "Credentials!A1", values: credValues },
+          { range: "Future Tasks!A1", values: futureValues },
+          { range: "Env Vars!A1", values: envValues }
+        ]
+      }
+    });
+    const requests = [];
+    requests.push(tabColor(0, C.accentPurple));
+    requests.push(tabColor(1, C.teal));
+    requests.push(tabColor(2, C.green));
+    requests.push(tabColor(3, C.orange));
+    requests.push(tabColor(4, rgb({ red: 0.278, green: 0.49, blue: 0.78 })));
+    requests.push(tabColor(5, rgb({ red: 0.133, green: 0.49, blue: 0.302 })));
+    const OV = 0;
+    requests.push(colWidth(OV, 0, 1, 200), colWidth(OV, 1, 2, 360), colWidth(OV, 2, 3, 160));
+    requests.push({ updateSheetProperties: { properties: { sheetId: OV, gridProperties: { frozenRowCount: 3 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(OV, 0, 1, 48));
+    requests.push(rowHeight(OV, 1, 2, 40));
+    requests.push(rowHeight(OV, 2, 3, 36));
+    requests.push(rowHeight(OV, 3, 4, 10));
+    requests.push(rowHeight(OV, 4, 5, 28));
+    requests.push(rowHeight(OV, 5, 6, 40));
+    requests.push(rowHeight(OV, 6, 7, 12));
+    requests.push(rowHeight(OV, 7, 8, 30));
+    requests.push(rowHeight(OV, 8, 18, 26));
+    requests.push(rowHeight(OV, 18, 19, 30));
+    requests.push(rowHeight(OV, 19, 20, 80));
+    requests.push(merge(OV, 0, 1, 0, 3));
+    requests.push(merge(OV, 1, 2, 0, 3));
+    requests.push(merge(OV, 2, 3, 0, 3));
+    requests.push(merge(OV, 3, 4, 0, 3));
+    requests.push(merge(OV, 7, 8, 0, 3));
+    requests.push(merge(OV, 17, 18, 0, 3));
+    requests.push(merge(OV, 18, 19, 0, 3));
+    requests.push(merge(OV, 19, 20, 0, 3));
+    for (let r = 8; r <= 16; r++) requests.push(merge(OV, r, r + 1, 1, 3));
+    requests.push(merge(OV, 4, 5, 0, 1), merge(OV, 4, 5, 1, 2), merge(OV, 4, 5, 2, 3));
+    requests.push(merge(OV, 5, 6, 0, 1), merge(OV, 5, 6, 1, 2), merge(OV, 5, 6, 2, 3));
+    requests.push(repeatCell(OV, 0, 1, 0, 3, C.deepBg, C.white, { bold: true, fontSize: 13, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 1, 2, 0, 3, C.midBg, C.white, { bold: true, fontSize: 16, align: "LEFT", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 2, 3, 0, 3, C.midBg, rgb({ red: 0.749, green: 0.812, blue: 0.914 }), { fontSize: 10, align: "LEFT", valign: "MIDDLE", italic: true }));
+    requests.push(repeatCell(OV, 3, 4, 0, 3, C.midBg, C.white));
+    requests.push(repeatCell(OV, 4, 5, 0, 3, C.deepBg, rgb({ red: 0.749, green: 0.812, blue: 0.914 }), { bold: true, fontSize: 8, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 5, 6, 0, 1, statusColor(project.status), C.white, { bold: true, fontSize: 12, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 5, 6, 1, 2, C.teal, C.white, { bold: true, fontSize: 12, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 5, 6, 2, 3, project.deadline ? C.orange : C.grayBg, C.white, { bold: true, fontSize: 11, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(OV, 6, 7, 0, 3, C.midBg, C.white));
+    requests.push(repeatCell(OV, 7, 8, 0, 3, C.midBg, rgb({ red: 0.749, green: 0.812, blue: 0.914 }), { bold: true, fontSize: 9, align: "CENTER" }));
+    for (let r = 8; r <= 16; r++) {
+      const bg = r % 2 === 0 ? C.altRow1 : C.altRow2;
+      requests.push(repeatCell(OV, r, r + 1, 0, 1, C.labelBg, rgb({ red: 0.749, green: 0.812, blue: 0.914 }), { bold: true, fontSize: 9 }));
+      requests.push(repeatCell(OV, r, r + 1, 1, 3, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+    }
+    requests.push(repeatCell(OV, 18, 19, 0, 3, C.midBg, rgb({ red: 0.749, green: 0.812, blue: 0.914 }), { bold: true, fontSize: 9, align: "CENTER" }));
+    requests.push(repeatCell(OV, 19, 20, 0, 3, C.altRow1, C.textDark, { fontSize: 10, wrap: "WRAP", valign: "TOP" }));
+    requests.push(border(OV, 8, 17, 0, 3));
+    const REQ = 1;
+    requests.push(colWidth(REQ, 0, 1, 40), colWidth(REQ, 1, 2, 110), colWidth(REQ, 2, 3, 260), colWidth(REQ, 3, 4, 90), colWidth(REQ, 4, 5, 480));
+    requests.push({ updateSheetProperties: { properties: { sheetId: REQ, gridProperties: { frozenRowCount: 3 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(REQ, 0, 1, 48));
+    requests.push(rowHeight(REQ, 1, 2, 10));
+    requests.push(rowHeight(REQ, 2, 3, 30));
+    requests.push(merge(REQ, 0, 1, 0, 5));
+    requests.push(merge(REQ, 1, 2, 0, 5));
+    requests.push(repeatCell(REQ, 0, 1, 0, 5, C.teal, C.white, { bold: true, fontSize: 14, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(REQ, 1, 2, 0, 5, C.teal, C.white));
+    requests.push(repeatCell(REQ, 2, 3, 0, 5, C.deepBg, C.white, { bold: true, fontSize: 10, align: "CENTER", valign: "MIDDLE" }));
+    for (let i = 0; i < requirements.length; i++) {
+      const r = 3 + i;
+      const bg = i % 2 === 0 ? C.altRow1 : C.altRow2;
+      requests.push(rowHeight(REQ, r, r + 1, 22));
+      requests.push(repeatCell(REQ, r, r + 1, 0, 1, bg, C.textMid, { align: "CENTER", fontSize: 9 }));
+      requests.push(repeatCell(REQ, r, r + 1, 1, 3, bg, C.textDark, { fontSize: 10 }));
+      const src = requirements[i].source || "";
+      const srcBg = src === "client" ? C.teal : src === "meeting" ? C.green : C.accentPurple;
+      requests.push(repeatCell(REQ, r, r + 1, 3, 4, srcBg, C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(REQ, r, r + 1, 4, 5, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+    }
+    if (requirements.length > 0) {
+      requests.push(border(REQ, 2, 3 + requirements.length, 0, 5));
+    }
+    const TASKS = 2;
+    requests.push(colWidth(TASKS, 0, 1, 40), colWidth(TASKS, 1, 2, 300), colWidth(TASKS, 2, 3, 110), colWidth(TASKS, 3, 4, 90), colWidth(TASKS, 4, 5, 90), colWidth(TASKS, 5, 6, 110));
+    requests.push({ updateSheetProperties: { properties: { sheetId: TASKS, gridProperties: { frozenRowCount: 4 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(TASKS, 0, 1, 48));
+    requests.push(rowHeight(TASKS, 1, 2, 32));
+    requests.push(rowHeight(TASKS, 2, 3, 10));
+    requests.push(rowHeight(TASKS, 3, 4, 30));
+    requests.push(merge(TASKS, 0, 1, 0, 6));
+    requests.push(merge(TASKS, 1, 2, 0, 2), merge(TASKS, 1, 2, 2, 4), merge(TASKS, 1, 2, 4, 6));
+    requests.push(merge(TASKS, 2, 3, 0, 6));
+    requests.push(repeatCell(TASKS, 0, 1, 0, 6, C.green, C.white, { bold: true, fontSize: 14, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(TASKS, 1, 2, 0, 2, C.deepBg, C.white, { bold: true, fontSize: 11, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(TASKS, 1, 2, 2, 4, C.green, C.white, { bold: true, fontSize: 11, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(TASKS, 1, 2, 4, 6, C.orange, C.white, { bold: true, fontSize: 11, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(TASKS, 2, 3, 0, 6, C.midBg, C.white));
+    requests.push(repeatCell(TASKS, 3, 4, 0, 6, C.deepBg, C.white, { bold: true, fontSize: 10, align: "CENTER", valign: "MIDDLE" }));
+    for (let i = 0; i < todos.length; i++) {
+      const r = 4 + i;
+      const todo = todos[i];
+      const bg = todo.completed ? C.doneBg : i % 2 === 0 ? C.altRow1 : C.altRow2;
+      requests.push(rowHeight(TASKS, r, r + 1, 22));
+      requests.push(repeatCell(TASKS, r, r + 1, 0, 1, bg, C.textMid, { align: "CENTER", fontSize: 9 }));
+      requests.push(repeatCell(TASKS, r, r + 1, 1, 2, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+      requests.push(repeatCell(TASKS, r, r + 1, 2, 3, bg, C.textMid, { fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(TASKS, r, r + 1, 3, 4, priorityColor(todo.priority), C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      const statusBg = todo.completed ? C.green : C.orange;
+      requests.push(repeatCell(TASKS, r, r + 1, 4, 5, statusBg, C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(TASKS, r, r + 1, 5, 6, bg, C.textMid, { fontSize: 9, align: "CENTER" }));
+    }
+    if (todos.length > 0) requests.push(border(TASKS, 3, 4 + todos.length, 0, 6));
+    const CRED = 3;
+    requests.push(colWidth(CRED, 0, 1, 40), colWidth(CRED, 1, 2, 180), colWidth(CRED, 2, 3, 100), colWidth(CRED, 3, 4, 130), colWidth(CRED, 4, 5, 220), colWidth(CRED, 5, 6, 220), colWidth(CRED, 6, 7, 200));
+    requests.push({ updateSheetProperties: { properties: { sheetId: CRED, gridProperties: { frozenRowCount: 4 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(CRED, 0, 1, 48));
+    requests.push(rowHeight(CRED, 1, 2, 30));
+    requests.push(rowHeight(CRED, 2, 3, 10));
+    requests.push(rowHeight(CRED, 3, 4, 30));
+    requests.push(merge(CRED, 0, 1, 0, 7));
+    requests.push(merge(CRED, 1, 2, 0, 7));
+    requests.push(merge(CRED, 2, 3, 0, 7));
+    requests.push(repeatCell(CRED, 0, 1, 0, 7, rgb({ red: 0.49, green: 0.11, blue: 0.11 }), C.white, { bold: true, fontSize: 14, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(CRED, 1, 2, 0, 7, C.warnBg, rgb({ red: 0.451, green: 0.231, blue: 0.02 }), { bold: true, fontSize: 9, align: "CENTER", valign: "MIDDLE", italic: true }));
+    requests.push(repeatCell(CRED, 2, 3, 0, 7, C.warnBg, C.white));
+    requests.push(repeatCell(CRED, 3, 4, 0, 7, rgb({ red: 0.49, green: 0.11, blue: 0.11 }), C.white, { bold: true, fontSize: 10, align: "CENTER", valign: "MIDDLE" }));
+    for (let i = 0; i < creds.length; i++) {
+      const r = 4 + i;
+      const bg = i % 2 === 0 ? C.credBg : C.altRow1;
+      requests.push(rowHeight(CRED, r, r + 1, 22));
+      requests.push(repeatCell(CRED, r, r + 1, 0, 1, bg, C.textMid, { align: "CENTER", fontSize: 9 }));
+      requests.push(repeatCell(CRED, r, r + 1, 1, 2, bg, C.textDark, { fontSize: 10, bold: true }));
+      requests.push(repeatCell(CRED, r, r + 1, 2, 3, C.orange, C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(CRED, r, r + 1, 3, 7, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+    }
+    if (creds.length > 0) requests.push(border(CRED, 3, 4 + creds.length, 0, 7));
+    const FT = 4;
+    requests.push(colWidth(FT, 0, 1, 40), colWidth(FT, 1, 2, 300), colWidth(FT, 2, 3, 90), colWidth(FT, 3, 4, 90), colWidth(FT, 4, 5, 130), colWidth(FT, 5, 6, 360));
+    requests.push({ updateSheetProperties: { properties: { sheetId: FT, gridProperties: { frozenRowCount: 3 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(FT, 0, 1, 48));
+    requests.push(rowHeight(FT, 1, 2, 10));
+    requests.push(rowHeight(FT, 2, 3, 30));
+    requests.push(merge(FT, 0, 1, 0, 6));
+    requests.push(merge(FT, 1, 2, 0, 6));
+    const ftAccent = rgb({ red: 0.278, green: 0.49, blue: 0.78 });
+    requests.push(repeatCell(FT, 0, 1, 0, 6, ftAccent, C.white, { bold: true, fontSize: 14, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(FT, 1, 2, 0, 6, ftAccent, C.white));
+    requests.push(repeatCell(FT, 2, 3, 0, 6, C.deepBg, C.white, { bold: true, fontSize: 10, align: "CENTER", valign: "MIDDLE" }));
+    for (let i = 0; i < futureTasks.length; i++) {
+      const r = 3 + i;
+      const ft = futureTasks[i];
+      const bg = i % 2 === 0 ? C.altRow1 : C.altRow2;
+      requests.push(rowHeight(FT, r, r + 1, 22));
+      requests.push(repeatCell(FT, r, r + 1, 0, 1, bg, C.textMid, { align: "CENTER", fontSize: 9 }));
+      requests.push(repeatCell(FT, r, r + 1, 1, 2, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+      requests.push(repeatCell(FT, r, r + 1, 2, 3, priorityColor(ft.priority), C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(FT, r, r + 1, 3, 4, effortColor(ft.estimatedEffort || ""), C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(FT, r, r + 1, 4, 5, bg, C.textMid, { fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(FT, r, r + 1, 5, 6, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+    }
+    if (futureTasks.length > 0) requests.push(border(FT, 2, 3 + futureTasks.length, 0, 6));
+    const ENV = 5;
+    const envGreen = rgb({ red: 0.133, green: 0.49, blue: 0.302 });
+    const envDarkGreen = rgb({ red: 0.078, green: 0.286, blue: 0.176 });
+    const envKeyBg = rgb({ red: 0.878, green: 0.945, blue: 0.906 });
+    const envAlt1 = rgb({ red: 0.937, green: 0.965, blue: 0.949 });
+    const envAlt2 = rgb({ red: 0.898, green: 0.937, blue: 0.914 });
+    requests.push(colWidth(ENV, 0, 1, 40), colWidth(ENV, 1, 2, 260), colWidth(ENV, 2, 3, 280), colWidth(ENV, 3, 4, 120), colWidth(ENV, 4, 5, 130));
+    requests.push({ updateSheetProperties: { properties: { sheetId: ENV, gridProperties: { frozenRowCount: 3 } }, fields: "gridProperties.frozenRowCount" } });
+    requests.push(rowHeight(ENV, 0, 1, 48));
+    requests.push(rowHeight(ENV, 1, 2, 10));
+    requests.push(rowHeight(ENV, 2, 3, 30));
+    requests.push(merge(ENV, 0, 1, 0, 5));
+    requests.push(merge(ENV, 1, 2, 0, 5));
+    requests.push(repeatCell(ENV, 0, 1, 0, 5, envDarkGreen, C.white, { bold: true, fontSize: 14, align: "CENTER", valign: "MIDDLE" }));
+    requests.push(repeatCell(ENV, 1, 2, 0, 5, envDarkGreen, C.white));
+    requests.push(repeatCell(ENV, 2, 3, 0, 5, C.deepBg, C.white, { bold: true, fontSize: 10, align: "CENTER", valign: "MIDDLE" }));
+    for (let i = 0; i < envVars.length; i++) {
+      const r = 3 + i;
+      const bg = i % 2 === 0 ? envAlt1 : envAlt2;
+      requests.push(rowHeight(ENV, r, r + 1, 22));
+      requests.push(repeatCell(ENV, r, r + 1, 0, 1, bg, C.textMid, { align: "CENTER", fontSize: 9 }));
+      requests.push(repeatCell(ENV, r, r + 1, 1, 2, envKeyBg, envDarkGreen, { bold: true, fontSize: 10, wrap: "WRAP" }));
+      requests.push(repeatCell(ENV, r, r + 1, 2, 3, bg, C.textDark, { fontSize: 10, wrap: "WRAP" }));
+      const envName = (envVars[i].environment || "").toLowerCase();
+      const envBadgeBg = envName === "production" || envName === "prod" ? C.red : envName === "staging" ? C.orange : envName === "development" || envName === "dev" ? envGreen : C.grayBg;
+      requests.push(repeatCell(ENV, r, r + 1, 3, 4, envBadgeBg, C.white, { bold: true, fontSize: 9, align: "CENTER" }));
+      requests.push(repeatCell(ENV, r, r + 1, 4, 5, bg, C.textMid, { fontSize: 9, align: "CENTER" }));
+    }
+    if (envVars.length > 0) requests.push(border(ENV, 2, 3 + envVars.length, 0, 5));
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Requirements!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [["REQUIREMENTS"]] }
+    });
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Tasks!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [["TASKS & TODO"]] }
+    });
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Credentials!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [["CREDENTIALS  —  CONFIDENTIAL"]] }
+    });
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Credentials!A2",
+      valueInputOption: "RAW",
+      requestBody: { values: [["⚠  Sensitive information — handle with care and do not share beyond authorized personnel  ⚠"]] }
+    });
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Future Tasks!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [["FUTURE TASKS & BACKLOG"]] }
+    });
+    await sheetsApi.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Env Vars!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [["ENVIRONMENT VARIABLES"]] }
+    });
+    await sheetsApi.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+  }
+  async function applySheetFormatting(_sheetsApi, _spreadsheetId) {
+  }
+  function getDbPath2() {
+    const rootFolder = store.get("rootFolder");
+    return path.join(rootFolder, "DevVault", "data", "db.json");
+  }
   createMainWindow();
   electron.app.on("activate", () => {
     if (electron.BrowserWindow.getAllWindows().length === 0) createMainWindow();

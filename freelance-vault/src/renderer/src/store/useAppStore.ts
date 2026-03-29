@@ -188,6 +188,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
     )
     await saveDb({ ...db, projects })
+    // Auto-sync to Google Sheets if enabled for this project
+    const sheetsConfig = (db.googleSheetsConfigs || []).find((c) => c.projectId === id)
+    if (sheetsConfig?.autoSync) {
+      window.electron.googleSheetsSync(id).catch(() => { /* silent fail */ })
+    }
   },
 
   deleteProject: async (id: string) => {

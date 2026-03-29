@@ -120,6 +120,16 @@ export interface FutureTask {
   updatedAt: string
 }
 
+export interface GoogleSheetsConfig {
+  projectId: string
+  spreadsheetId: string
+  spreadsheetUrl: string
+  sharedEmails: string[]
+  lastSynced?: string
+  autoSync: boolean
+  createdAt: string
+}
+
 export interface Database {
   projects: Project[]
   payments: Payment[]
@@ -132,6 +142,7 @@ export interface Database {
   projectTodos?: ProjectTodo[]
   improvements?: Improvement[]
   futureTasks?: FutureTask[]
+  googleSheetsConfigs?: GoogleSheetsConfig[]
 }
 
 export type AppView = 'dashboard' | 'projects' | 'project-detail' | 'analytics' | 'bank-details' | 'backup' | 'ai-manager' | 'mac-tools'

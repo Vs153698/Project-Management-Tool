@@ -28,6 +28,7 @@ import ScriptRunner from '../scripts/ScriptRunner'
 import InvoiceGenerator from '../invoice/InvoiceGenerator'
 import LinkedInGenerator from '../ai/LinkedInGenerator'
 import ProjectPlanning from './ProjectPlanning'
+import GoogleSheetsManager from '../sharing/GoogleSheetsManager'
 
 const statusColors: Record<string, string> = {
   not_started: 'text-text-muted bg-text-muted/10 border-text-muted/20',
@@ -131,7 +132,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
 
   const isPersonal = project.projectType === 'personal'
 
-  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin' | 'planning'
+  type TabKey = 'overview' | 'payments' | 'credentials' | 'files' | 'time' | 'env' | 'scripts' | 'invoice' | 'linkedin' | 'planning' | 'share'
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: 'Overview' },
     { key: 'planning', label: 'Planning' },
@@ -143,6 +144,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
     { key: 'scripts', label: 'Scripts' },
     ...(!isPersonal ? [{ key: 'invoice' as TabKey, label: 'Invoice' }] : []),
     { key: 'linkedin', label: 'LinkedIn' },
+    { key: 'share', label: 'Share' },
   ]
 
   return (
@@ -401,6 +403,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }): JSX
               <div className="p-6">
                 <LinkedInGenerator projectId={project.id} />
               </div>
+            )}
+
+            {activeTab === 'share' && (
+              <GoogleSheetsManager projectId={project.id} />
             )}
           </motion.div>
         </AnimatePresence>
